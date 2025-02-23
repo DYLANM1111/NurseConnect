@@ -9,7 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "This app uses Face ID to securely access stored credentials.",
+        "faceIDPermission": "Allow $NurseConnect to access your Face ID biometric data."
+      }
     },
     "android": {
       "adaptiveIcon": {
