@@ -1,5 +1,4 @@
-// app/(tabs)/home.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,9 +7,14 @@ import {
   TouchableOpacity,
   SafeAreaView,
   RefreshControl,
-  Image
+  Image,
+  TextInput,
+  Animated,
+  Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 
 type Shift = {
   id: string;
@@ -23,237 +27,146 @@ type Shift = {
   distance: string;
   specialty: string;
   facilityRating: number;
+  shiftLength: number;
+  urgentFill?: boolean;
 };
+const shifts: Shift[] = [
+  {
+    id: '1',
+    hospital: 'Wake Baptist Hospital',
+    unit: 'ICU',
+    date: '2025-02-14',
+    startTime: '07:00',
+    endTime: '19:00',
+    rate: 75.50,
+    distance: '5.2 miles',
+    specialty: 'ICU',
+    facilityRating: 4.5,
+    shiftLength: 12,
+    urgentFill: true
+  },
+  {
+    id: '2',
+    hospital: 'Duke Hospital',
+    unit: 'ER',
+    date: '2025-02-14',
+    startTime: '07:00',
+    endTime: '15:00',
+    rate: 60.00,
+    distance: '7.2 miles',
+    specialty: 'ER',
+    facilityRating: 3.5,
+    shiftLength: 8
+  },
+  {
+    id: '3',
+    hospital: 'WakeMed Hospital',
+    unit: 'OR',
+    date: '2025-02-14',
+    startTime: '07:00',
+    endTime: '19:00',
+    rate: 85.50,
+    distance: '5.2 miles',
+    specialty: 'OR',
+    facilityRating: 4.5,
+    shiftLength: 12
+  },
+  {
+    id: '4',
+    hospital: 'UNC Medical Center',
+    unit: 'Med-Surg',
+    date: '2025-03-06',
+    startTime: '19:00',
+    endTime: '07:00',
+    rate: 72.00,
+    distance: '12.5 miles',
+    specialty: 'Med-Surg',
+    facilityRating: 4.2,
+    shiftLength: 12
+  },
+  {
+    id: '5',
+    hospital: 'Rex Hospital',
+    unit: 'Cardiac',
+    date: '2025-02-15',
+    startTime: '07:00',
+    endTime: '19:00',
+    rate: 78.50,
+    distance: '8.7 miles',
+    specialty: 'Med-Surg',
+    facilityRating: 4.7,
+    shiftLength: 12,
+    urgentFill: true
+  },
+  {
+    id: '6',
+    hospital: 'Novant Health Presbyterian Medical Center',
+    unit: 'Pediatric',
+    date: '2025-02-16',
+    startTime: '07:00',
+    endTime: '19:00',
+    rate: 80.00,
+    distance: '10.3 miles',
+    specialty: 'Pediatric',
+    facilityRating: 4.6,
+    shiftLength: 12
+  },
+  {
+    id: '7',
+    hospital: 'Atrium Health Carolinas Medical Center',
+    unit: 'NICU',
+    date: '2025-02-16',
+    startTime: '19:00',
+    endTime: '07:00',
+    rate: 85.00,
+    distance: '15.0 miles',
+    specialty: 'NICU',
+    facilityRating: 4.8,
+    shiftLength: 12,
+    urgentFill: true
+  },
+  {
+    id: '8',
+    hospital: 'Cone Health Wesley Long Hospital',
+    unit: 'Cardiac',
+    date: '2025-02-17',
+    startTime: '07:00',
+    endTime: '19:00',
+    rate: 77.00,
+    distance: '18.2 miles',
+    specialty: 'Cardiac',
+    facilityRating: 4.4,
+    shiftLength: 12
+  },
+  {
+    id: '9',
+    hospital: 'Mission Hospital',
+    unit: 'ER',
+    date: '2025-02-17',
+    startTime: '07:00',
+    endTime: '15:00',
+    rate: 65.00,
+    distance: '22.5 miles',
+    specialty: 'ER',
+    facilityRating: 4.1,
+    shiftLength: 8
+  },
+  {
+    id: '10',
+    hospital: 'FirstHealth Moore Regional Hospital',
+    unit: 'Med-Surg',
+    date: '2025-02-18',
+    startTime: '07:00',
+    endTime: '19:00',
+    rate: 70.00,
+    distance: '25.0 miles',
+    specialty: 'Med-Surg',
+    facilityRating: 4.3,
+    shiftLength: 12
+  }
+];
 
-export default function HomeScreen() {
-  const router = useRouter();
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedSpecialty, setSelectedSpecialty] = useState('All');
-  const [refreshing, setRefreshing] = useState(false);
-  const [viewType, setViewType] = useState<'list' | 'calendar'>('list');
-
-  // Mock data for shifts
-  const shifts: Shift[] = [
-    {
-      id: '1',
-      hospital: 'Wake Baptist Hospital',
-      unit: 'ICU',
-      date: '2025-02-14',
-      startTime: '07:00',
-      endTime: '19:00',
-      rate: 75.50,
-      distance: '5.2 miles',
-      specialty: 'ICU',
-      facilityRating: 4.5
-    },
-    {
-      id: '2',
-      hospital: 'Duke Hospital',
-      unit: 'ER',
-      date: '2025-02-14',
-      startTime: '07:00',
-      endTime: '19:00',
-      rate: 50.00,
-      distance: '7.2 miles',
-      specialty: 'ER',
-      facilityRating: 3.5
-    },
-    {
-      id: '3',
-      hospital: 'WakeMed Hospital',
-      unit: 'OR',
-      date: '2025-02-14',
-      startTime: '07:00',
-      endTime: '19:00',
-      rate: 75.50,
-      distance: '5.2 miles',
-      specialty: 'OR',
-      facilityRating: 4.5
-    },
-  ];
-
-  const nextSevenDays = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() + i);
-    return date;
-  });
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric' 
-    });
-  };
-
-  const ShiftCard = ({ shift }: { shift: Shift }) => (
-    <TouchableOpacity 
-      style={styles.shiftCard}
-      onPress={() => router.push(`/shift/${shift.id}`)}
-    >
-      <View style={styles.shiftHeader}>
-        <View>
-          <Text style={styles.hospitalName}>{shift.hospital}</Text>
-          <Text style={styles.unitName}>{shift.unit}</Text>
-        </View>
-        <View style={styles.rateContainer}>
-          <Text style={styles.rateAmount}>${shift.rate}</Text>
-          <Text style={styles.rateLabel}>/hr</Text>
-        </View>
-      </View>
-
-      <View style={styles.shiftDetails}>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Date:</Text>
-          <Text style={styles.detailValue}>{shift.date}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Time:</Text>
-          <Text style={styles.detailValue}>{shift.startTime} - {shift.endTime}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Distance:</Text>
-          <Text style={styles.detailValue}>{shift.distance}</Text>
-        </View>
-      </View>
-
-      <View style={styles.shiftFooter}>
-        <View style={styles.tagContainer}>
-          <Text style={styles.tag}>{shift.specialty}</Text>
-        </View>
-        <View style={styles.ratingContainer}>
-          <Text style={styles.ratingText}>{shift.facilityRating}</Text>
-          {/* Add star icon here */}
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.welcomeText}>Hi, Sarah</Text>
-          <TouchableOpacity 
-            style={styles.profileButton}
-            onPress={() => router.push('/profile')}
-          >
-            <View style={styles.avatarPlaceholder} />
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.headerBottom}>
-          <Text style={styles.location}>San Francisco Bay Area</Text>
-          <TouchableOpacity 
-            style={styles.locationButton}
-            onPress={() => router.push('/location')}
-          >
-            <Text style={styles.locationButtonText}>Change</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Filters */}
-      <View style={styles.filtersContainer}>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.dateFilters}
-        >
-          {nextSevenDays.map((date, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.dateButton,
-                selectedDate.toDateString() === date.toDateString() && styles.dateButtonActive
-              ]}
-              onPress={() => setSelectedDate(date)}
-            >
-              <Text style={[
-                styles.dateButtonText,
-                selectedDate.toDateString() === date.toDateString() && styles.dateButtonTextActive
-              ]}>
-                {formatDate(date)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.specialtyFilters}
-        >
-          {['All', 'ICU', 'ER', 'Med-Surg', 'OR'].map((specialty) => (
-            <TouchableOpacity
-              key={specialty}
-              style={[
-                styles.specialtyButton,
-                selectedSpecialty === specialty && styles.specialtyButtonActive
-              ]}
-              onPress={() => setSelectedSpecialty(specialty)}
-            >
-              <Text style={[
-                styles.specialtyButtonText,
-                selectedSpecialty === specialty && styles.specialtyButtonTextActive
-              ]}>
-                {specialty}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Main Content */}
-      <ScrollView
-        style={styles.content}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => {
-              setRefreshing(true);
-              // Add refresh logic here
-              setTimeout(() => setRefreshing(false), 1000);
-            }}
-          />
-        }
-      >
-        <View style={styles.contentHeader}>
-          <Text style={styles.contentTitle}>Available Shifts</Text>
-          <View style={styles.viewToggle}>
-            <TouchableOpacity 
-              style={[styles.viewToggleButton, viewType === 'list' && styles.viewToggleButtonActive]}
-              onPress={() => setViewType('list')}
-            >
-              <Text style={[
-                styles.viewToggleText,
-                viewType === 'list' && styles.viewToggleTextActive
-              ]}>List</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.viewToggleButton, viewType === 'calendar' && styles.viewToggleButtonActive]}
-              onPress={() => setViewType('calendar')}
-            >
-              <Text style={[
-                styles.viewToggleText,
-                viewType === 'calendar' && styles.viewToggleTextActive
-              ]}>Calendar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Shifts List */}
-        <View style={styles.shiftsContainer}>
-          {shifts.map((shift) => (
-            <ShiftCard key={shift.id} shift={shift} />
-          ))}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
-
+// Define styles outside of the component
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -261,7 +174,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#FFFFFF',
-    padding: 20,
+    padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
@@ -269,10 +182,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  notificationButton: {
+    marginRight: 16,
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    width: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  notificationBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
   },
   welcomeText: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: '#1E2022',
   },
@@ -282,18 +221,22 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#F3F4F6',
     overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   avatarPlaceholder: {
     width: '100%',
     height: '100%',
     backgroundColor: '#E5E7EB',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerBottom: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   location: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#6B7280',
   },
   locationButton: {
@@ -305,68 +248,278 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  filtersContainer: {
+  searchContainer: {
+    flexDirection: 'row',
+    padding: 12,
     backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  searchBar: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    marginRight: 12,
+    height: 36,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    height: 36,
+    fontSize: 14,
+    color: '#1E2022',
+  },
+  clearButton: {
+    padding: 4,
+  },
+  filterButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  expandedFilters: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
-  dateFilters: {
+  filterSection: {
+    marginBottom: 16,
+  },
+  filterSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E2022',
+    marginBottom: 12,
+  },
+  priceRangeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  rangeBar: {
+    flex: 1,
+    height: 6,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 3,
+    marginHorizontal: 12,
+    position: 'relative',
+  },
+  rangeFill: {
+    position: 'absolute',
+    height: 6,
+    backgroundColor: '#006AFF',
+    borderRadius: 3,
+  },
+  rangeValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  rangeButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  rangeButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    borderRadius: 6,
+  },
+  rangeButtonActive: {
+    backgroundColor: '#EBF5FF',
+  },
+  rangeButtonText: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  rangeButtonTextActive: {
+    color: '#006AFF',
+    fontWeight: '500',
+  },
+  distanceButtonsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  distanceButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  distanceButtonActive: {
+    backgroundColor: '#EBF5FF',
+    borderColor: '#006AFF',
+  },
+  distanceButtonText: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  distanceButtonTextActive: {
+    color: '#006AFF',
+    fontWeight: '500',
+  },
+  shiftLengthButtonsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  shiftLengthButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  shiftLengthButtonActive: {
+    backgroundColor: '#EBF5FF',
+    borderColor: '#006AFF',
+  },
+  shiftLengthButtonText: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  shiftLengthButtonTextActive: {
+    color: '#006AFF',
+    fontWeight: '500',
+  },
+  filterActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  resetButton: {
+    paddingVertical: 8,
     paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  resetButtonText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  applyFiltersButton: {
+    backgroundColor: '#006AFF',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  applyFiltersButtonText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  /* Compact date filter styles */
+  dateFilterContainer: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  dateFilters: {
+    paddingHorizontal: 12,
     gap: 8,
   },
   dateButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    alignItems: 'center',
+    width: 50,
+    paddingVertical: 6,
+    borderRadius: 8,
     backgroundColor: '#F3F4F6',
   },
   dateButtonActive: {
-    backgroundColor: '#006AFF',
+    backgroundColor: '#EBF5FF',
+    borderWidth: 1,
+    borderColor: '#006AFF',
   },
-  dateButtonText: {
+  dateButtonDay: {
+    fontSize: 11,
     color: '#6B7280',
-    fontSize: 14,
-    fontWeight: '500',
+    marginBottom: 2,
   },
-  dateButtonTextActive: {
-    color: '#FFFFFF',
+  dateButtonDayActive: {
+    color: '#006AFF',
+  },
+  dateButtonNumber: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E2022',
+  },
+  dateButtonNumberActive: {
+    color: '#006AFF',
+  },
+
+// Additional styles continuing from Part 1
+
+  /* Compact specialty filter styles */
+  specialtyFiltersContainer: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   specialtyFilters: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    gap: 8,
+    paddingHorizontal: 12,
+    gap: 6,
   },
   specialtyButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
     backgroundColor: '#F3F4F6',
+    marginRight: 6,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   specialtyButtonActive: {
     backgroundColor: '#EBF5FF',
+    borderColor: '#006AFF',
   },
   specialtyButtonText: {
     color: '#6B7280',
-    fontSize: 14,
+    fontSize: 12,
   },
   specialtyButtonTextActive: {
     color: '#006AFF',
     fontWeight: '500',
   },
-  content: {
-    flex: 1,
-  },
+  /* Content header - more compact */
   contentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  contentTitleContainer: {
+    flex: 1,
   },
   contentTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#1E2022',
+  },
+  shiftCount: {
+    fontSize: 14,
+    color: '#6B7280',
   },
   viewToggle: {
     flexDirection: 'row',
@@ -375,56 +528,85 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   viewToggleButton: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
   },
   viewToggleButtonActive: {
     backgroundColor: '#FFFFFF',
   },
-  viewToggleText: {
-    color: '#6B7280',
-    fontSize: 14,
-  },
-  viewToggleTextActive: {
-    color: '#1E2022',
-    fontWeight: '500',
+  /* Shift cards and content */
+  content: {
+    flex: 1,
   },
   shiftsContainer: {
     padding: 16,
-    gap: 16,
+    paddingTop: 16,
   },
+  /* Enhanced shift card - bigger and more prominent */
   shiftCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: 3,
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+  urgentCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#EF4444',
+  },
+  urgentBadge: {
+    position: 'absolute',
+    bottom: 72,
+    left:80,
+    backgroundColor: '#EF4444',
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  urgentBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
   },
   shiftHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 16,
+    paddingTop:20,
+
+  },
+  hospitalInfo: {
+    flex: 1,
+    paddingRight: 16,
   },
   hospitalName: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
     color: '#1E2022',
     marginBottom: 4,
   },
   unitName: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#6B7280',
   },
   rateContainer: {
     alignItems: 'flex-end',
   },
   rateAmount: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     color: '#059669',
   },
@@ -433,26 +615,29 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   shiftDetails: {
-    gap: 8,
+    flexDirection: 'row',
     marginBottom: 16,
   },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  detailColumn: {
+    flex: 1,
   },
-  detailLabel: {
-    fontSize: 14,
-    color: '#6B7280',
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  detailIcon: {
+    marginRight: 8,
   },
   detailValue: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#1E2022',
-    fontWeight: '500',
   },
   shiftFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 16,
   },
   tagContainer: {
     backgroundColor: '#F3F4F6',
@@ -475,4 +660,484 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1E2022',
   },
+  applyButton: {
+    backgroundColor: '#006AFF',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  applyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyStateContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1E2022',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  resetFiltersButton: {
+    backgroundColor: '#006AFF',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  resetFiltersButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  fab: {
+    position: 'absolute',
+    right: 16,
+    bottom: 16,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#006AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#006AFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
+  }
 });
+export default function HomeScreen() {
+  const router = useRouter();
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedSpecialty, setSelectedSpecialty] = useState('All');
+  const [refreshing, setRefreshing] = useState(false);
+  const [viewType, setViewType] = useState('list');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [priceRange, setPriceRange] = useState([40, 100]);
+  const [maxDistance, setMaxDistance] = useState(25);
+  const [shiftLength, setShiftLength] = useState([8, 12]);
+
+  // Filter shifts based on selected criteria
+  const filteredShifts = shifts.filter(shift => {
+    // Filter by specialty
+    const specialtyMatches = selectedSpecialty === 'All' || shift.specialty === selectedSpecialty;
+    
+    // Filter by search (hospital name or unit)
+    const searchMatches = searchQuery === '' || 
+      shift.hospital.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      shift.unit.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Filter by price range
+    const rateMatches = shift.rate >= priceRange[0] && shift.rate <= priceRange[1];
+    
+    // Filter by distance - parse distance string to get number
+    const distanceValue = parseFloat(shift.distance.split(' ')[0]);
+    const distanceMatches = distanceValue <= maxDistance;
+    
+    // Filter by shift length
+    const lengthMatches = shiftLength.includes(shift.shiftLength);
+    
+    return specialtyMatches && searchMatches && rateMatches && distanceMatches && lengthMatches;
+  });
+
+  const nextSevenDays = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() + i);
+    return date;
+  });
+
+  const formatDay = (date) => {
+    const today = new Date();
+    
+    if (
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
+    ) {
+      return 'Today';
+    }
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    if (
+      date.getDate() === tomorrow.getDate() &&
+      date.getMonth() === tomorrow.getMonth() &&
+      date.getFullYear() === tomorrow.getFullYear()
+    ) {
+      return 'Tmrw';
+    }
+
+    return date.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 3);
+  };
+
+  const formatDateNumber = (date) => {
+    return date.getDate().toString();
+  };
+
+  const toggleFilter = (length) => {
+    if (shiftLength.includes(length)) {
+      setShiftLength(shiftLength.filter(l => l !== length));
+    } else {
+      setShiftLength([...shiftLength, length]);
+    }
+  };
+
+  const ShiftCard = ({ shift }) => (
+    <TouchableOpacity 
+      style={[styles.shiftCard, shift.urgentFill && styles.urgentCard]}
+      onPress={() => router.push(`/shift/${shift.id}`)}
+    >
+      {shift.urgentFill && (
+        <View style={styles.urgentBadge}>
+          <Ionicons name="flash" size={12} color="#FFFFFF" />
+          <Text style={styles.urgentBadgeText}>Urgent</Text>
+        </View>
+      )}
+      
+      <View style={styles.shiftHeader}>
+        <View style={styles.hospitalInfo}>
+          <Text style={styles.hospitalName}>{shift.hospital}</Text>
+          <Text style={styles.unitName}>{shift.unit}</Text>
+        </View>
+        <View style={styles.rateContainer}>
+          <Text style={styles.rateAmount}>${shift.rate.toFixed(2)}</Text>
+          <Text style={styles.rateLabel}>/hr</Text>
+        </View>
+      </View>
+
+      <View style={styles.shiftDetails}>
+        <View style={styles.detailColumn}>
+          <View style={styles.detailItem}>
+            <Ionicons name="calendar-outline" size={16} color="#6B7280" style={styles.detailIcon} />
+            <Text style={styles.detailValue}>{shift.date}</Text>
+          </View>
+          <View style={styles.detailItem}>
+            <Ionicons name="time-outline" size={16} color="#6B7280" style={styles.detailIcon} />
+            <Text style={styles.detailValue}>{shift.startTime} - {shift.endTime}</Text>
+          </View>
+        </View>
+        <View style={styles.detailColumn}>
+          <View style={styles.detailItem}>
+            <Ionicons name="location-outline" size={16} color="#6B7280" style={styles.detailIcon} />
+            <Text style={styles.detailValue}>{shift.distance}</Text>
+          </View>
+          <View style={styles.detailItem}>
+            <Ionicons name="hourglass-outline" size={16} color="#6B7280" style={styles.detailIcon} />
+            <Text style={styles.detailValue}>{shift.shiftLength} hours</Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.shiftFooter}>
+        <View style={styles.tagContainer}>
+          <Text style={styles.tag}>{shift.specialty}</Text>
+        </View>
+        <View style={styles.ratingContainer}>
+          <Ionicons name="star" size={16} color="#FFBC00" />
+          <Text style={styles.ratingText}>{shift.facilityRating.toFixed(1)}</Text>
+        </View>
+      </View>
+      
+      <TouchableOpacity 
+        style={styles.applyButton}
+        onPress={() => router.push(`/apply/${shift.id}`)}
+      >
+        <Text style={styles.applyButtonText}>Apply</Text>
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+
+  const EmptyState = () => (
+    <View style={styles.emptyStateContainer}>
+      <Ionicons name="calendar-outline" size={60} color="#D1D5DB" />
+      <Text style={styles.emptyStateTitle}>No shifts available</Text>
+      <Text style={styles.emptyStateText}>
+        No shifts match your current filters. Try adjusting your filters or check back later for new opportunities.
+      </Text>
+      <TouchableOpacity 
+        style={styles.resetFiltersButton}
+        onPress={() => {
+          setSelectedSpecialty('All');
+          setPriceRange([40, 100]);
+          setMaxDistance(25);
+          setShiftLength([8, 12]);
+          setSearchQuery('');
+        }}
+      >
+        <Text style={styles.resetFiltersButtonText}>Reset Filters</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Header - Slightly reduced height */}
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
+          <Text style={styles.welcomeText}>Hi, Sarah</Text>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity 
+              style={styles.notificationButton}
+              onPress={() => router.push('/notifications')}
+            >
+              <Ionicons name="notifications-outline" size={24} color="#1E2022" />
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>3</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.profileButton}
+              onPress={() => router.push('/profile')}
+            >
+              <View style={styles.avatarPlaceholder}>
+                <Ionicons name="person" size={20} color="#8F9BB3" />
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+        
+        <View style={styles.headerBottom}>
+          <Text style={styles.location}>
+            <Ionicons name="location" size={16} color="#006AFF" />
+            {' '}San Francisco Bay Area
+          </Text>
+          <TouchableOpacity 
+            style={styles.locationButton}
+            onPress={() => router.push('/location')}
+          >
+            <Text style={styles.locationButtonText}>Change</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Search Bar - Slightly reduced height */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={18} color="#6B7280" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search facilities or units"
+            placeholderTextColor="#A0A0A0"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery !== '' && (
+            <TouchableOpacity 
+              style={styles.clearButton}
+              onPress={() => setSearchQuery('')}
+            >
+              <Ionicons name="close-circle" size={16} color="#6B7280" />
+            </TouchableOpacity>
+          )}
+        </View>
+        <TouchableOpacity 
+          style={styles.filterButton}
+          onPress={() => setShowFilters(!showFilters)}
+        >
+          <Ionicons name="options-outline" size={20} color={showFilters ? "#006AFF" : "#1E2022"} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Expanded Filters */}
+      {showFilters && (
+        <View style={styles.expandedFilters}>
+          {/* Filter content unchanged */}
+          <View style={styles.filterSection}>
+            <Text style={styles.filterSectionTitle}>Price Range ($/hr)</Text>
+            <View style={styles.priceRangeContainer}>
+              <Text style={styles.rangeValue}>${priceRange[0]}</Text>
+              <View style={styles.rangeBar}>
+                <View style={[styles.rangeFill, {width: `${((priceRange[1] - priceRange[0]) / 60) * 100}%`, left: `${((priceRange[0] - 40) / 60) * 100}%`}]} />
+              </View>
+              <Text style={styles.rangeValue}>${priceRange[1]}+</Text>
+            </View>
+            <View style={styles.rangeButtonsContainer}>
+              {[40, 50, 60, 70, 80, 90, 100].map(value => (
+                <TouchableOpacity 
+                  key={value}
+                  style={[
+                    styles.rangeButton, 
+                    value >= priceRange[0] && value <= priceRange[1] && styles.rangeButtonActive
+                  ]}
+                  onPress={() => {
+                    if (value < priceRange[1]) setPriceRange([value, priceRange[1]]);
+                    else if (value > priceRange[0]) setPriceRange([priceRange[0], value]);
+                  }}
+                >
+                  <Text style={[
+                    styles.rangeButtonText,
+                    value >= priceRange[0] && value <= priceRange[1] && styles.rangeButtonTextActive
+                  ]}>${value}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Other filter sections... */}
+          <View style={styles.filterActions}>
+            <TouchableOpacity 
+              style={styles.resetButton}
+              onPress={() => {
+                setPriceRange([40, 100]);
+                setMaxDistance(25);
+                setShiftLength([8, 12]);
+              }}
+            >
+              <Text style={styles.resetButtonText}>Reset</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.applyFiltersButton}
+              onPress={() => setShowFilters(false)}
+            >
+              <Text style={styles.applyFiltersButtonText}>Apply Filters</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Compact Date Selector */}
+      <View style={styles.dateFilterContainer}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.dateFilters}
+        >
+          {nextSevenDays.map((date, index) => (
+            <TouchableOpacity
+              key={index}
+              style={[
+                styles.dateButton,
+                selectedDate.toDateString() === date.toDateString() && styles.dateButtonActive
+              ]}
+              onPress={() => setSelectedDate(date)}
+            >
+              <Text style={[
+                styles.dateButtonDay,
+                selectedDate.toDateString() === date.toDateString() && styles.dateButtonDayActive
+              ]}>
+                {formatDay(date)}
+              </Text>
+              <Text style={[
+                styles.dateButtonNumber,
+                selectedDate.toDateString() === date.toDateString() && styles.dateButtonNumberActive
+              ]}>
+                {formatDateNumber(date)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      <View style={styles.specialtyFiltersContainer}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.specialtyFilters}
+        >
+          {['All', 'ICU', 'ER', 'Med-Surg', 'OR', 'Cardiac', 'Pediatric', 'NICU'].map((specialty) => (
+          <TouchableOpacity
+            key={specialty}
+            style={[
+              styles.specialtyButton,
+              selectedSpecialty === specialty && styles.specialtyButtonActive
+            ]}
+            onPress={() => setSelectedSpecialty(specialty)}
+          >
+            <Text style={[
+              styles.specialtyButtonText,
+              selectedSpecialty === specialty && styles.specialtyButtonTextActive
+            ]}>
+              {specialty}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+      </View>
+
+      {/* Main Content Header */}
+      <View style={styles.contentHeader}>
+        <View style={styles.contentTitleContainer}>
+          <Text style={styles.contentTitle}>Available Shifts</Text>
+          <Text style={styles.shiftCount}>
+            {filteredShifts.length} {filteredShifts.length === 1 ? 'shift' : 'shifts'} found
+          </Text>
+        </View>
+        <View style={styles.viewToggle}>
+          <TouchableOpacity 
+            style={[styles.viewToggleButton, viewType === 'list' && styles.viewToggleButtonActive]}
+            onPress={() => setViewType('list')}
+          >
+            <Ionicons 
+              name="list" 
+              size={18} 
+              color={viewType === 'list' ? '#1E2022' : '#6B7280'} 
+            />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.viewToggleButton, viewType === 'calendar' && styles.viewToggleButtonActive]}
+            onPress={() => setViewType('calendar')}
+          >
+            <Ionicons 
+              name="calendar" 
+              size={18} 
+              color={viewType === 'calendar' ? '#1E2022' : '#6B7280'} 
+            />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Shifts List - Now given more prominence */}
+      <ScrollView
+        style={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              // Add refresh logic here
+              setTimeout(() => setRefreshing(false), 1000);
+            }}
+          />
+        }
+      >
+        <View style={styles.shiftsContainer}>
+          {filteredShifts.length > 0 ? (
+            filteredShifts.map((shift) => (
+              <ShiftCard key={shift.id} shift={shift} />
+            ))
+          ) : (
+            <EmptyState />
+          )}
+        </View>
+      </ScrollView>
+
+      {/* Floating Action Button */}
+      <TouchableOpacity 
+        style={styles.fab}
+        onPress={() => {
+          // Filter button when scrolled down
+          if (showFilters) {
+            setShowFilters(false);
+          } else {
+            setShowFilters(true);
+          }
+        }}
+      >
+        <Ionicons name="options" size={22} color="#FFFFFF" />
+      </TouchableOpacity>
+    </SafeAreaView>
+  );
+}

@@ -7,9 +7,11 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  Dimensions
+  Dimensions,
+  Image
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
@@ -46,6 +48,14 @@ export default function DashboardScreen() {
   const router = useRouter();
   const [timeframe, setTimeframe] = useState('week');
 
+  const handleFindShifts = () => {
+    router.push('/find-shifts');
+  };
+
+  const handleViewProfile = () => {
+    router.push('/profile');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -53,13 +63,35 @@ export default function DashboardScreen() {
         <Text style={styles.headerTitle}>Dashboard</Text>
         <TouchableOpacity 
           style={styles.profileButton}
-          onPress={() => router.push('/profile')}
+          onPress={handleViewProfile}
         >
-          <View style={styles.avatar} />
+          <View style={styles.avatar}>
+            <Ionicons name="person" size={22} color="#8F9BB3" />
+          </View>
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Welcome Banner */}
+        <View style={styles.welcomeCard}>
+          <View style={styles.welcomeContent}>
+            <Text style={styles.welcomeText}>Welcome back,</Text>
+            <Text style={styles.welcomeName}>Sarah</Text>
+            <TouchableOpacity 
+              style={styles.findShiftsButton}
+              onPress={handleFindShifts}
+            >
+              <Ionicons name="search" size={18} color="#FFFFFF" style={styles.buttonIcon} />
+              <Text style={styles.findShiftsButtonText}>Find Shifts</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.welcomeImageContainer}>
+            <View style={styles.welcomeImage}>
+              <Ionicons name="calendar" size={32} color="#0065FF" />
+            </View>
+          </View>
+        </View>
+
         {/* Earnings Card */}
         <View style={styles.earningsCard}>
           <View style={styles.earningsHeader}>
@@ -93,7 +125,7 @@ export default function DashboardScreen() {
           </View>
           
           <Text style={styles.earningsAmount}>
-            ${timeframe === 'week' ? EARNINGS_SUMMARY.weekly : EARNINGS_SUMMARY.monthly}
+            ${timeframe === 'week' ? EARNINGS_SUMMARY.weekly.toLocaleString() : EARNINGS_SUMMARY.monthly.toLocaleString()}
           </Text>
           
           <View style={styles.statsGrid}>
@@ -107,6 +139,39 @@ export default function DashboardScreen() {
               <Text style={styles.statLabel}>Shifts</Text>
             </View>
           </View>
+        </View>
+
+        {/* Action Buttons */}
+        <View style={styles.actionButtonsContainer}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={handleFindShifts}
+          >
+            <View style={[styles.actionIconContainer, {backgroundColor: '#E3F5FF'}]}>
+              <Ionicons name="search" size={22} color="#0065FF" />
+            </View>
+            <Text style={styles.actionButtonText}>Find Shifts</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => router.push('/shifts')}
+          >
+            <View style={[styles.actionIconContainer, {backgroundColor: '#FFF4E3'}]}>
+              <Ionicons name="calendar-outline" size={22} color="#FF9500" />
+            </View>
+            <Text style={styles.actionButtonText}>My Schedule</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => router.push('/earnings')}
+          >
+            <View style={[styles.actionIconContainer, {backgroundColor: '#E6FFEF'}]}>
+              <Ionicons name="cash-outline" size={22} color="#36B37E" />
+            </View>
+            <Text style={styles.actionButtonText}>Earnings</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Upcoming Shift Card - If any */}
@@ -147,7 +212,7 @@ export default function DashboardScreen() {
           >
             <View style={styles.pastShiftHeader}>
               <Text style={styles.pastShiftDate}>{shift.date}</Text>
-              <Text style={styles.pastShiftEarnings}>${shift.earnings}</Text>
+              <Text style={styles.pastShiftEarnings}>${shift.earnings.toLocaleString()}</Text>
             </View>
             <Text style={styles.pastShiftHospital}>{shift.hospital}</Text>
             <Text style={styles.pastShiftUnit}>{shift.unit}</Text>
@@ -160,6 +225,15 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+
+      {/* Floating Find Shifts Button */}
+      <TouchableOpacity 
+        style={styles.floatingButton}
+        onPress={handleFindShifts}
+      >
+        <Ionicons name="add" size={24} color="#FFFFFF" />
+        <Text style={styles.floatingButtonText}>Find Shifts</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -190,15 +264,111 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#F3F4F6',
     overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   avatar: {
     width: '100%',
     height: '100%',
     backgroundColor: '#E5E7EB',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   content: {
     flex: 1,
     padding: 16,
+  },
+  welcomeCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#1A1F33',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  welcomeContent: {
+    flex: 3,
+  },
+  welcomeText: {
+    fontSize: 14,
+    color: '#8F9BB3',
+    marginBottom: 4,
+  },
+  welcomeName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2E3A59',
+    marginBottom: 16,
+  },
+  welcomeImageContainer: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  welcomeImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#E3F5FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  findShiftsButton: {
+    backgroundColor: '#0065FF',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    shadowColor: '#0065FF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  buttonIcon: {
+    marginRight: 6,
+  },
+  findShiftsButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  actionButton: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 4,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+    shadowColor: '#1A1F33',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  actionIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  actionButtonText: {
+    fontSize: 12,
+    color: '#2E3A59',
+    fontWeight: '500',
   },
   earningsCard: {
     backgroundColor: '#FFFFFF',
@@ -392,5 +562,27 @@ const styles = StyleSheet.create({
     color: '#0065FF',
     fontSize: 12,
     fontWeight: '500',
+  },
+  floatingButton: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    backgroundColor: '#0065FF',
+    borderRadius: 28,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    shadowColor: '#0065FF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  floatingButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 16,
+    marginLeft: 8,
   },
 });

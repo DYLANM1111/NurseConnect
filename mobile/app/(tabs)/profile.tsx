@@ -109,7 +109,7 @@ export default function ProfileScreen() {
         <View style={styles.profileCard}>
           <View style={styles.profileHeader}>
             <Image
-            // source={require('../../assets/images/default-avatar.png')}
+            source={require('../../assets/images/dog3.jpg')}
               style={styles.profileImage}
             />
             <View style={styles.profileInfo}>
