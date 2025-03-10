@@ -98,7 +98,7 @@ export default function ProfileScreen() {
           setUserData(enhancedUserData);
         } else {
           // No user data found, redirect to login
-          console.log('No user data found, redirecting to login');
+          console.log('No user data found, redirecting to login test');
           router.replace('/signin');
         }
       } catch (error) {
