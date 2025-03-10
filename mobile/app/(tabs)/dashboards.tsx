@@ -1,5 +1,4 @@
-// app/(tabs)/dashboard.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,14 +7,16 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Dimensions,
-  Image
+  Image,
+  ActivityIndicator
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
-// Mock data
+// Mock data - we'll replace with actual data when available
 const MOCK_SHIFTS = [
   {
     id: '1',
@@ -37,16 +38,64 @@ const MOCK_SHIFTS = [
   },
 ];
 
-const EARNINGS_SUMMARY = {
-  weekly: 1910.00,
-  monthly: 7640.00,
-  totalHours: 20,
-  completedShifts: 2
+const DEFAULT_EARNINGS_SUMMARY = {
+  weekly: 0,
+  monthly: 0,
+  totalHours: 0,
+  completedShifts: 0
 };
 
 export default function DashboardScreen() {
   const router = useRouter();
   const [timeframe, setTimeframe] = useState('week');
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [earningsSummary, setEarningsSummary] = useState(DEFAULT_EARNINGS_SUMMARY);
+
+  // Fetch user data on component mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        setLoading(true);
+        const userDataString = await AsyncStorage.getItem('user');
+        
+        if (userDataString) {
+          const user = JSON.parse(userDataString);
+          setUserData(user);
+          console.log('User data loaded:', user);
+          
+          // In a real app, you'd fetch the user's shifts and earnings here
+          // For now, we'll use mock data
+          fetchUserEarnings(user.id);
+        } else {
+          // No user data found, redirect to login
+          console.log('No user data found, redirecting to login');
+          router.replace('/signin');
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  // Mock function to fetch user earnings
+  // In a real app, this would make an API call to your backend
+  const fetchUserEarnings = async (userId) => {
+    // Simulating API call
+    setTimeout(() => {
+      // Mock data - in a real app, this would come from your backend
+      setEarningsSummary({
+        weekly: 1910.00,
+        monthly: 7640.00,
+        totalHours: 20,
+        completedShifts: 2
+      });
+    }, 500);
+  };
 
   const handleFindShifts = () => {
     router.push('/find-shifts');
@@ -55,6 +104,16 @@ export default function DashboardScreen() {
   const handleViewProfile = () => {
     router.push('/profile');
   };
+
+  // Show loading screen while fetching user data
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color="#0065FF" />
+        <Text style={styles.loadingText}>Loading your dashboard...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -76,7 +135,9 @@ export default function DashboardScreen() {
         <View style={styles.welcomeCard}>
           <View style={styles.welcomeContent}>
             <Text style={styles.welcomeText}>Welcome back,</Text>
-            <Text style={styles.welcomeName}>Sarah</Text>
+            <Text style={styles.welcomeName}>
+              {userData ? userData.first_name : 'Nurse'}
+            </Text>
             <TouchableOpacity 
               style={styles.findShiftsButton}
               onPress={handleFindShifts}
@@ -125,17 +186,17 @@ export default function DashboardScreen() {
           </View>
           
           <Text style={styles.earningsAmount}>
-            ${timeframe === 'week' ? EARNINGS_SUMMARY.weekly.toLocaleString() : EARNINGS_SUMMARY.monthly.toLocaleString()}
+            ${timeframe === 'week' ? earningsSummary.weekly.toLocaleString() : earningsSummary.monthly.toLocaleString()}
           </Text>
           
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{EARNINGS_SUMMARY.totalHours}</Text>
+              <Text style={styles.statValue}>{earningsSummary.totalHours}</Text>
               <Text style={styles.statLabel}>Hours</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{EARNINGS_SUMMARY.completedShifts}</Text>
+              <Text style={styles.statValue}>{earningsSummary.completedShifts}</Text>
               <Text style={styles.statLabel}>Shifts</Text>
             </View>
           </View>

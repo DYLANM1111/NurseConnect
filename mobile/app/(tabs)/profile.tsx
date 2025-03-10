@@ -1,5 +1,5 @@
 // app/(tabs)/profile.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,65 +9,107 @@ import {
   SafeAreaView,
   Image,
   Alert,
-  Dimensions
+  Dimensions,
+  ActivityIndicator
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
-// Mock data
-const USER_DATA = {
-  name: 'Sarah Johnson',
-  title: 'RN, BSN',
-  specialty: 'ICU Nurse',
-  experience: '5 years',
-  email: 'sarah.johnson@email.com',
-  phone: '(650) 555-0123',
-  licenses: [
-    {
-      id: '1',
-      type: 'RN License',
-      number: 'RN 12345678',
-      state: 'CA',
-      expiryDate: '2025-12-31',
-      status: 'active',
-      verificationStatus: 'verified'
-    }
-  ],
-  certifications: [
-    {
-      id: '1',
-      name: 'BLS',
-      issuingBody: 'American Heart Association',
-      expiryDate: '2025-06-30',
-      status: 'active'
-    },
-    {
-      id: '2',
-      name: 'ACLS',
-      issuingBody: 'American Heart Association',
-      expiryDate: '2025-06-30',
-      status: 'active'
-    },
-    {
-      id: '3',
-      name: 'PALS',
-      issuingBody: 'American Heart Association',
-      expiryDate: '2025-06-30',
-      status: 'active'
-    }
-  ],
-  preferredShifts: ['Day', 'Evening'],
-  maxDistanceMiles: 50,
-  hourlyRateRange: {
-    min: 85,
-    max: 110
-  }
+// Fallback data (used while loading or if data is missing)
+const DEFAULT_USER_DATA = {
+  first_name: '',
+  last_name: '',
+  title: '',
+  specialty: '',
+  experience: '',
+  email: '',
+  phone_number: '',
+  licenses: [],
+  certifications: [],
+  preferredShiftTypes: [],
+  preferredDistance: 0,
+  minHourlyRate: 0,
+  maxHourlyRate: 0
 };
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const [userData, setUserData] = useState(DEFAULT_USER_DATA);
+  const [loading, setLoading] = useState(true);
   const [showAllCerts, setShowAllCerts] = useState(false);
+ console.log(userData,'This is the')
+  // Fetch user data when component mounts
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        setLoading(true);
+        const userDataString = await AsyncStorage.getItem('user');
+        
+        if (userDataString) {
+          const user = JSON.parse(userDataString);
+          console.log('User data loaded:', user);
+          
+          // If the user has a nurse_profile_id, fetch their full profile details
+          // For now, we'll just use the data we have and mock some of the missing fields
+          
+          // Combine user data with additional profile info
+          const enhancedUserData = {
+            ...user,
+            title: user.specialty || 'RN',
+            experience: user.yearsExperience ? `${user.yearsExperience} years` : '',
+            // Mock data for licenses and certifications, to be replaced with API data
+            licenses: [
+              {
+                id: '1',
+                type: 'RN License',
+                number: 'RN 12345678',
+                state: 'CA',
+                expiryDate: '2025-12-31',
+                status: 'active',
+                verificationStatus: 'verified'
+              }
+            ],
+            certifications: [
+              {
+                id: '1',
+                name: 'BLS',
+                issuingBody: 'American Heart Association',
+                expiryDate: '2025-06-30',
+                status: 'active'
+              },
+              {
+                id: '2',
+                name: 'ACLS',
+                issuingBody: 'American Heart Association',
+                expiryDate: '2025-06-30',
+                status: 'active'
+              }
+            ],
+            preferredShifts: user.preferredShiftTypes || [],
+            maxDistanceMiles: user.preferredDistance || 25,
+            hourlyRateRange: {
+              min: user.minHourlyRate || 0,
+              max: user.maxHourlyRate || 0
+            }
+          };
+          
+          setUserData(enhancedUserData);
+        } else {
+          // No user data found, redirect to login
+          console.log('No user data found, redirecting to login');
+          router.replace('/signin');
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
 
   const handleUploadDocument = () => {
     Alert.alert(
@@ -91,6 +133,16 @@ export default function ProfileScreen() {
     return 'valid';
   };
 
+  // Show loading indicator while fetching data
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color="#0065FF" />
+        <Text style={styles.loadingText}>Loading your profile...</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -109,24 +161,26 @@ export default function ProfileScreen() {
         <View style={styles.profileCard}>
           <View style={styles.profileHeader}>
             <Image
-            source={require('../../assets/images/dog3.jpg')}
+              source={require('../../assets/images/dog3.jpg')}
               style={styles.profileImage}
             />
             <View style={styles.profileInfo}>
-              <Text style={styles.name}>{USER_DATA.name}</Text>
-              <Text style={styles.title}>{USER_DATA.title}</Text>
-              <Text style={styles.specialty}>{USER_DATA.specialty}</Text>
+              <Text style={styles.name}>{userData.first_name} {userData.last_name}</Text>
+              <Text style={styles.title}>{userData.title}</Text>
+              <Text style={styles.specialty}>{userData.specialty}</Text>
             </View>
           </View>
 
           <View style={styles.infoGrid}>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Experience</Text>
-              <Text style={styles.infoValue}>{USER_DATA.experience}</Text>
+              <Text style={styles.infoValue}>{userData.experience || 'Not specified'}</Text>
             </View>
-            <View style={styles.infoItem}>r
+            <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Preferred Rate</Text>
-              <Text style={styles.infoValue}>${USER_DATA.hourlyRateRange.min}-{USER_DATA.hourlyRateRange.max}/hr</Text>
+              <Text style={styles.infoValue}>
+                ${userData.minHourlyRate}-{userData.maxHourlyRate}/hr
+              </Text>
             </View>
           </View>
 
@@ -147,40 +201,52 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          {USER_DATA.licenses.map((license) => (
-            <View key={license.id} style={styles.licenseCard}>
-              <View style={styles.licenseHeader}>
-                <Text style={styles.licenseTitle}>{license.type}</Text>
-                <View style={[
-                  styles.statusTag,
-                  getExpiryStatus(license.expiryDate) === 'valid' && styles.validTag,
-                  getExpiryStatus(license.expiryDate) === 'expiring' && styles.expiringTag,
-                  getExpiryStatus(license.expiryDate) === 'expired' && styles.expiredTag,
-                ]}>
-                  <Text style={[
-                    styles.statusText,
-                    getExpiryStatus(license.expiryDate) === 'valid' && styles.validText,
-                    getExpiryStatus(license.expiryDate) === 'expiring' && styles.expiringText,
-                    getExpiryStatus(license.expiryDate) === 'expired' && styles.expiredText,
+          {userData.licenses && userData.licenses.length > 0 ? (
+            userData.licenses.map((license) => (
+              <View key={license.id} style={styles.licenseCard}>
+                <View style={styles.licenseHeader}>
+                  <Text style={styles.licenseTitle}>{license.type}</Text>
+                  <View style={[
+                    styles.statusTag,
+                    getExpiryStatus(license.expiryDate) === 'valid' && styles.validTag,
+                    getExpiryStatus(license.expiryDate) === 'expiring' && styles.expiringTag,
+                    getExpiryStatus(license.expiryDate) === 'expired' && styles.expiredTag,
                   ]}>
-                    {getExpiryStatus(license.expiryDate) === 'valid' ? 'Active' :
-                     getExpiryStatus(license.expiryDate) === 'expiring' ? 'Expiring Soon' :
-                     'Expired'}
-                  </Text>
+                    <Text style={[
+                      styles.statusText,
+                      getExpiryStatus(license.expiryDate) === 'valid' && styles.validText,
+                      getExpiryStatus(license.expiryDate) === 'expiring' && styles.expiringText,
+                      getExpiryStatus(license.expiryDate) === 'expired' && styles.expiredText,
+                    ]}>
+                      {getExpiryStatus(license.expiryDate) === 'valid' ? 'Active' :
+                      getExpiryStatus(license.expiryDate) === 'expiring' ? 'Expiring Soon' :
+                      'Expired'}
+                    </Text>
+                  </View>
                 </View>
+                <Text style={styles.licenseNumber}>License # {license.number}</Text>
+                <Text style={styles.licenseState}>State: {license.state}</Text>
+                <Text style={styles.expiryDate}>Expires: {new Date(license.expiryDate).toLocaleDateString()}</Text>
+                
+                <TouchableOpacity 
+                  style={styles.documentButton}
+                  onPress={() => console.log('View document')}
+                >
+                  <Text style={styles.documentButtonText}>View Document</Text>
+                </TouchableOpacity>
               </View>
-              <Text style={styles.licenseNumber}>License # {license.number}</Text>
-              <Text style={styles.licenseState}>State: {license.state}</Text>
-              <Text style={styles.expiryDate}>Expires: {new Date(license.expiryDate).toLocaleDateString()}</Text>
-              
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No licenses added yet</Text>
               <TouchableOpacity 
-                style={styles.documentButton}
-                onPress={() => console.log('View document')}
+                style={styles.addButton}
+                onPress={handleUploadDocument}
               >
-                <Text style={styles.documentButtonText}>View Document</Text>
+                <Text style={styles.addButtonText}>Add License</Text>
               </TouchableOpacity>
             </View>
-          ))}
+          )}
         </View>
 
         {/* Certifications Section */}
@@ -192,51 +258,65 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          {USER_DATA.certifications
-            .slice(0, showAllCerts ? undefined : 2)
-            .map((cert) => (
-              <View key={cert.id} style={styles.certCard}>
-                <View style={styles.certHeader}>
-                  <Text style={styles.certTitle}>{cert.name}</Text>
-                  <View style={[
-                    styles.statusTag,
-                    getExpiryStatus(cert.expiryDate) === 'valid' && styles.validTag,
-                    getExpiryStatus(cert.expiryDate) === 'expiring' && styles.expiringTag,
-                    getExpiryStatus(cert.expiryDate) === 'expired' && styles.expiredTag,
-                  ]}>
-                    <Text style={[
-                      styles.statusText,
-                      getExpiryStatus(cert.expiryDate) === 'valid' && styles.validText,
-                      getExpiryStatus(cert.expiryDate) === 'expiring' && styles.expiringText,
-                      getExpiryStatus(cert.expiryDate) === 'expired' && styles.expiredText,
-                    ]}>
-                      {getExpiryStatus(cert.expiryDate) === 'valid' ? 'Active' :
-                       getExpiryStatus(cert.expiryDate) === 'expiring' ? 'Expiring Soon' :
-                       'Expired'}
-                    </Text>
+          {userData.certifications && userData.certifications.length > 0 ? (
+            <>
+              {userData.certifications
+                .slice(0, showAllCerts ? undefined : 2)
+                .map((cert) => (
+                  <View key={cert.id} style={styles.certCard}>
+                    <View style={styles.certHeader}>
+                      <Text style={styles.certTitle}>{cert.name}</Text>
+                      <View style={[
+                        styles.statusTag,
+                        getExpiryStatus(cert.expiryDate) === 'valid' && styles.validTag,
+                        getExpiryStatus(cert.expiryDate) === 'expiring' && styles.expiringTag,
+                        getExpiryStatus(cert.expiryDate) === 'expired' && styles.expiredTag,
+                      ]}>
+                        <Text style={[
+                          styles.statusText,
+                          getExpiryStatus(cert.expiryDate) === 'valid' && styles.validText,
+                          getExpiryStatus(cert.expiryDate) === 'expiring' && styles.expiringText,
+                          getExpiryStatus(cert.expiryDate) === 'expired' && styles.expiredText,
+                        ]}>
+                          {getExpiryStatus(cert.expiryDate) === 'valid' ? 'Active' :
+                          getExpiryStatus(cert.expiryDate) === 'expiring' ? 'Expiring Soon' :
+                          'Expired'}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.certIssuer}>{cert.issuingBody}</Text>
+                    <Text style={styles.expiryDate}>Expires: {new Date(cert.expiryDate).toLocaleDateString()}</Text>
+                    
+                    <TouchableOpacity 
+                      style={styles.documentButton}
+                      onPress={() => console.log('View certification')}
+                    >
+                      <Text style={styles.documentButtonText}>View Certificate</Text>
+                    </TouchableOpacity>
                   </View>
-                </View>
-                <Text style={styles.certIssuer}>{cert.issuingBody}</Text>
-                <Text style={styles.expiryDate}>Expires: {new Date(cert.expiryDate).toLocaleDateString()}</Text>
-                
-                <TouchableOpacity 
-                  style={styles.documentButton}
-                  onPress={() => console.log('View certification')}
-                >
-                  <Text style={styles.documentButtonText}>View Certificate</Text>
-                </TouchableOpacity>
-              </View>
-          ))}
+              ))}
 
-          {USER_DATA.certifications.length > 2 && (
-            <TouchableOpacity 
-              style={styles.showMoreButton}
-              onPress={() => setShowAllCerts(!showAllCerts)}
-            >
-              <Text style={styles.showMoreText}>
-                {showAllCerts ? 'Show Less' : 'Show All Certifications'}
-              </Text>
-            </TouchableOpacity>
+              {userData.certifications.length > 2 && (
+                <TouchableOpacity 
+                  style={styles.showMoreButton}
+                  onPress={() => setShowAllCerts(!showAllCerts)}
+                >
+                  <Text style={styles.showMoreText}>
+                    {showAllCerts ? 'Show Less' : 'Show All Certifications'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No certifications added yet</Text>
+              <TouchableOpacity 
+                style={styles.addButton}
+                onPress={handleUploadDocument}
+              >
+                <Text style={styles.addButtonText}>Add Certification</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
 
@@ -253,11 +333,15 @@ export default function ProfileScreen() {
             <View style={styles.preferenceItem}>
               <Text style={styles.preferenceLabel}>Preferred Shifts</Text>
               <View style={styles.shiftTags}>
-                {USER_DATA.preferredShifts.map((shift, index) => (
-                  <View key={index} style={styles.shiftTag}>
-                    <Text style={styles.shiftTagText}>{shift}</Text>
-                  </View>
-                ))}
+                {userData.preferredShifts && userData.preferredShifts.length > 0 ? (
+                  userData.preferredShifts.map((shift, index) => (
+                    <View key={index} style={styles.shiftTag}>
+                      <Text style={styles.shiftTagText}>{shift}</Text>
+                    </View>
+                  ))
+                ) : (
+                  <Text style={styles.noPreferenceText}>No preferences set</Text>
+                )}
               </View>
             </View>
             
@@ -265,7 +349,7 @@ export default function ProfileScreen() {
             
             <View style={styles.preferenceItem}>
               <Text style={styles.preferenceLabel}>Maximum Distance</Text>
-              <Text style={styles.preferenceValue}>{USER_DATA.maxDistanceMiles} miles</Text>
+              <Text style={styles.preferenceValue}>{userData.maxDistanceMiles} miles</Text>
             </View>
             
             <View style={styles.divider} />
@@ -273,7 +357,7 @@ export default function ProfileScreen() {
             <View style={styles.preferenceItem}>
               <Text style={styles.preferenceLabel}>Hourly Rate Range</Text>
               <Text style={styles.preferenceValue}>
-                ${USER_DATA.hourlyRateRange.min} - ${USER_DATA.hourlyRateRange.max}
+                ${userData.hourlyRateRange.min} - ${userData.hourlyRateRange.max}
               </Text>
             </View>
           </View>
@@ -282,6 +366,7 @@ export default function ProfileScreen() {
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

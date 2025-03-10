@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons as Icon } from '@expo/vector-icons';
-import { Stack } from 'expo-router'; 
+import { authAPI } from '../api/client';
 
 
 // Type for navigation
@@ -29,20 +29,34 @@ const LoginScreen: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password');
-      return;
-    }
 
-    setIsLoading(true);
+const handleLogin = async () => {
+  if (!email || !password) {
+    Alert.alert('Error', 'Please enter both email and password');
+    return;
+  }
+
+  setIsLoading(true);
+  
+  try {
+    const response = await authAPI.login(email, password);
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      navigation.navigate('Dashboard');
-    }, 1500);
-  };
+    console.log('Login successful:', response);
+    
+    navigation.navigate('dashboards');
+  } catch (error) {
+    console.error('Login error:', error);
+    
+    Alert.alert(
+      'Login Failed', 
+      typeof error === 'string' 
+        ? error 
+        : 'Unable to login. Please check your credentials and try again.'
+    );
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleForgotPassword = () => {
     navigation.navigate('ForgotPassword');
@@ -62,7 +76,7 @@ const LoginScreen: React.FC = () => {
           {/* Header with Logo */}
           <View style={styles.headerContainer}>
             <Image
-           //   source={require('../assets/logo.png')}
+              source={require('../../assets/images/dog2.jpeg')}
               style={styles.logo}
               resizeMode="contain"
             />

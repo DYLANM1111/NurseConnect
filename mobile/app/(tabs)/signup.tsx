@@ -1,5 +1,4 @@
-// app/signup.tsx
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -12,11 +11,14 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Image
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-
-// Define types for our form data
+import * as ImagePicker from 'expo-image-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { authAPI } from '../api/client';
+// Types
 type AccountFormData = {
   email: string;
   password: string;
@@ -38,6 +40,21 @@ type ProfessionalFormData = {
   maxHourlyRate: string;
 };
 
+type LicenseFormData = {
+  licenseType: string;
+  licenseNumber: string;
+  state: string;
+  expiryDate: Date;
+  licenseImage: string | null;
+};
+
+type CertificationFormData = {
+  certName: string;
+  issuingBody: string;
+  expiryDate: Date;
+  certImage: string | null;
+};
+
 // Available shift types
 const SHIFT_TYPES = ['Day', 'Night', 'Evening', 'Weekend', 'On-Call'];
 
@@ -56,12 +73,60 @@ const SPECIALTIES = [
   'Other'
 ];
 
+// States for license dropdown
+const STATES = [
+  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+  'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+  'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+  'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
+];
+
+// License types
+const LICENSE_TYPES = [
+  'Registered Nurse (RN)',
+  'Licensed Practical Nurse (LPN)',
+  'Advanced Practice Registered Nurse (APRN)',
+  'Certified Nursing Assistant (CNA)',
+  'Nurse Practitioner (NP)',
+  'Clinical Nurse Specialist (CNS)',
+  'Other'
+];
+
+// Certification types
+const CERTIFICATION_TYPES = [
+  'Basic Life Support (BLS)',
+  'Advanced Cardiac Life Support (ACLS)',
+  'Pediatric Advanced Life Support (PALS)',
+  'Neonatal Resuscitation Program (NRP)',
+  'Trauma Nursing Core Course (TNCC)',
+  'Critical Care Registered Nurse (CCRN)',
+  'Medical-Surgical Nursing Certification (MEDSURG-BC)',
+  'Other'
+];
+
+// Certification issuing bodies
+const ISSUING_BODIES = [
+  'American Heart Association (AHA)',
+  'American Nurses Credentialing Center (ANCC)',
+  'American Association of Critical-Care Nurses (AACN)',
+  'National Council of State Boards of Nursing (NCSBN)',
+  'Emergency Nurses Association (ENA)',
+  'American Red Cross',
+  'Other'
+];
+
 export default function SignUpScreen() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [currentUploadFor, setCurrentUploadFor] = useState('');
 
-  // Form data for each step
+  // Date picker state
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [datePickerMode, setDatePickerMode] = useState('date');
+  const [currentDateField, setCurrentDateField] = useState('');
+
   const [accountData, setAccountData] = useState<AccountFormData>({
     email: '',
     password: '',
@@ -83,10 +148,121 @@ export default function SignUpScreen() {
     maxHourlyRate: '',
   });
 
-  // Error messages
+  const [licenseData, setLicenseData] = useState<LicenseFormData>({
+    licenseType: '',
+    licenseNumber: '',
+    state: '',
+    expiryDate: new Date(new Date().setFullYear(new Date().getFullYear() + 2)),
+    licenseImage: null,
+  });
+
+  const [certificationData, setCertificationData] = useState<CertificationFormData>({
+    certName: '',
+    issuingBody: '',
+    expiryDate: new Date(new Date().setFullYear(new Date().getFullYear() + 2)),
+    certImage: null,
+  });
+
   const [accountErrors, setAccountErrors] = useState<{ [key: string]: string }>({});
   const [personalErrors, setPersonalErrors] = useState<{ [key: string]: string }>({});
   const [professionalErrors, setProfessionalErrors] = useState<{ [key: string]: string }>({});
+  const [licenseErrors, setLicenseErrors] = useState<{ [key: string]: string }>({});
+  const [certificationErrors, setCertificationErrors] = useState<{ [key: string]: string }>({});
+
+  // Open image picker for gallery
+  const pickImage = async (for_field) => {
+    try {
+      // Request media library permissions if needed
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'We need gallery permissions to select photos');
+        return;
+      }
+      
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7,
+      });
+      
+      if (!result.canceled) {
+        if (for_field === 'license') {
+          setLicenseData(prev => ({
+            ...prev,
+            licenseImage: result.assets[0].uri
+          }));
+        } else if (for_field === 'certification') {
+          setCertificationData(prev => ({
+            ...prev,
+            certImage: result.assets[0].uri
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    }
+  };
+
+  // Take a photo with camera
+  const takePhoto = async (for_field) => {
+    try {
+      // Request camera permissions
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'We need camera permissions to take photos');
+        return;
+      }
+      
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7,
+      });
+      
+      if (!result.canceled) {
+        if (for_field === 'license') {
+          setLicenseData(prev => ({
+            ...prev,
+            licenseImage: result.assets[0].uri
+          }));
+        } else if (for_field === 'certification') {
+          setCertificationData(prev => ({
+            ...prev,
+            certImage: result.assets[0].uri
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
+    }
+  };
+
+  // Handle date picker
+  const showDatePickerModal = (field: string) => {
+    setCurrentDateField(field);
+    setShowDatePicker(true);
+  };
+
+  const onDateChange = (event, selectedDate) => {
+    const currentDate = selectedDate || new Date();
+    setShowDatePicker(false);
+    
+    if (currentDateField === 'licenseExpiry') {
+      setLicenseData(prev => ({
+        ...prev,
+        expiryDate: currentDate
+      }));
+    } else if (currentDateField === 'certExpiry') {
+      setCertificationData(prev => ({
+        ...prev,
+        expiryDate: currentDate
+      }));
+    }
+  };
 
   // Update form data
   const updateAccountData = (key: keyof AccountFormData, value: string) => {
@@ -122,6 +298,28 @@ export default function SignUpScreen() {
     }
   };
 
+  const updateLicenseData = (key: keyof LicenseFormData, value: any) => {
+    setLicenseData((prev) => ({ ...prev, [key]: value }));
+    if (licenseErrors[key]) {
+      setLicenseErrors((prev) => {
+        const updated = { ...prev };
+        delete updated[key];
+        return updated;
+      });
+    }
+  };
+
+  const updateCertificationData = (key: keyof CertificationFormData, value: any) => {
+    setCertificationData((prev) => ({ ...prev, [key]: value }));
+    if (certificationErrors[key]) {
+      setCertificationErrors((prev) => {
+        const updated = { ...prev };
+        delete updated[key];
+        return updated;
+      });
+    }
+  };
+
   // Toggle shift type selection
   const toggleShiftType = (shiftType: string) => {
     const currentTypes = [...professionalData.preferredShiftTypes];
@@ -135,7 +333,7 @@ export default function SignUpScreen() {
     }
   };
 
-  // Validate account data
+  // Validation functions
   const validateAccountData = () => {
     const errors: { [key: string]: string } = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -160,7 +358,6 @@ export default function SignUpScreen() {
     return Object.keys(errors).length === 0;
   };
 
-  // Validate personal data
   const validatePersonalData = () => {
     const errors: { [key: string]: string } = {};
     const phoneRegex = /^\d{10}$/;
@@ -183,7 +380,6 @@ export default function SignUpScreen() {
     return Object.keys(errors).length === 0;
   };
 
-  // Validate professional data
   const validateProfessionalData = () => {
     const errors: { [key: string]: string } = {};
 
@@ -217,43 +413,116 @@ export default function SignUpScreen() {
     return Object.keys(errors).length === 0;
   };
 
-  // Handle next step
+  const validateLicenseData = () => {
+    const errors: { [key: string]: string } = {};
+
+    if (!licenseData.licenseType) {
+      errors.licenseType = 'License type is required';
+    }
+
+    if (!licenseData.licenseNumber) {
+      errors.licenseNumber = 'License number is required';
+    }
+
+    if (!licenseData.state) {
+      errors.state = 'State is required';
+    }
+
+    if (!licenseData.licenseImage) {
+      errors.licenseImage = 'License image is required';
+    }
+
+    setLicenseErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateCertificationData = () => {
+    const errors: { [key: string]: string } = {};
+
+    if (!certificationData.certName) {
+      errors.certName = 'Certification name is required';
+    }
+
+    if (!certificationData.issuingBody) {
+      errors.issuingBody = 'Issuing body is required';
+    }
+
+    if (!certificationData.certImage) {
+      errors.certImage = 'Certification image is required';
+    }
+
+    setCertificationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Navigation between steps
   const handleNextStep = () => {
     if (step === 1 && validateAccountData()) {
       setStep(2);
     } else if (step === 2 && validatePersonalData()) {
       setStep(3);
+    } else if (step === 3 && validateProfessionalData()) {
+      setStep(4);
+    } else if (step === 4 && validateLicenseData()) {
+      setStep(5);
     }
   };
 
-  // Handle previous step
   const handlePrevStep = () => {
     if (step > 1) {
       setStep(step - 1);
     }
   };
 
-  // Handle form submission
+  // Form submission
   const handleSubmit = async () => {
-    if (!validateProfessionalData()) {
+    if (!validateCertificationData()) {
       return;
     }
-
+  
     setLoading(true);
-
+  
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
       // Combine all form data
       const userData = {
-        ...accountData,
-        ...personalData,
-        ...professionalData,
-        role: 'nurse'
+        email: accountData.email,
+        password: accountData.password,
+        firstName: personalData.firstName,
+        lastName: personalData.lastName,
+        phoneNumber: personalData.phoneNumber,
+        role: 'nurse',
+        specialty: professionalData.specialty,
+        yearsExperience: professionalData.yearsExperience,
+        preferredShiftTypes: professionalData.preferredShiftTypes,
+        preferredDistance: professionalData.preferredDistance,
+        minHourlyRate: professionalData.minHourlyRate,
+        maxHourlyRate: professionalData.maxHourlyRate,
+        license: {
+          type: licenseData.licenseType,
+          number: licenseData.licenseNumber,
+          state: licenseData.state,
+          expiryDate: licenseData.expiryDate.toISOString().split('T')[0],
+          imagePath: licenseData.licenseImage
+        },
+        certification: {
+          name: certificationData.certName,
+          issuingBody: certificationData.issuingBody,
+          expiryDate: certificationData.expiryDate.toISOString().split('T')[0],
+          imagePath: certificationData.certImage
+        }
       };
-
+  
       console.log('User data to be submitted:', userData);
+      
+      // Make the actual API call to the backend
+      // You'll need to modify your backend to accept the license and certification data
+      // You'll also need to handle image uploads - this might require a different approach
+      // like form data or a dedicated image upload endpoint
+      
+      // For this example, let's assume our authAPI has been updated to handle this
+      const response = await authAPI.register(userData);
+      
+      console.log('Registration response:', response);
       
       // Show success message and navigate
       Alert.alert(
@@ -267,7 +536,11 @@ export default function SignUpScreen() {
         ]
       );
     } catch (error) {
-      Alert.alert("Registration Failed", "There was an error creating your account. Please try again.");
+      console.error('Registration error:', error);
+      Alert.alert(
+        "Registration Failed", 
+        typeof error === 'string' ? error : "There was an error creating your account. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -299,6 +572,117 @@ export default function SignUpScreen() {
     </View>
   );
 
+  // Render dropdown selector
+  const renderDropdown = (
+    label: string,
+    options: string[],
+    selectedValue: string,
+    onSelect: (value: string) => void,
+    error?: string
+  ) => (
+    <View style={styles.inputContainer}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={[styles.input, error ? styles.inputError : null]}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.dropdownContainer}
+        >
+          {options.map(option => (
+            <TouchableOpacity
+              key={option}
+              style={[
+                styles.dropdownItem,
+                selectedValue === option ? styles.dropdownItemSelected : null
+              ]}
+              onPress={() => onSelect(option)}
+            >
+              <Text
+                style={[
+                  styles.dropdownItemText,
+                  selectedValue === option ? styles.dropdownItemTextSelected : null
+                ]}
+              >
+                {option}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    </View>
+  );
+
+  // Render date picker input
+  const renderDatePicker = (
+    label: string,
+    value: Date,
+    onPress: () => void,
+    error?: string
+  ) => (
+    <View style={styles.inputContainer}>
+      <Text style={styles.label}>{label}</Text>
+      <TouchableOpacity
+        style={[styles.input, styles.dateInput, error ? styles.inputError : null]}
+        onPress={onPress}
+      >
+        <Text style={styles.dateText}>
+          {value.toLocaleDateString()}
+        </Text>
+        <Ionicons name="calendar-outline" size={20} color="#777" />
+      </TouchableOpacity>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    </View>
+  );
+
+  // Render image picker
+  const renderImagePicker = (
+    label: string,
+    imageUri: string | null,
+    onPress: () => void,
+    onCameraPress: () => void,
+    error?: string
+  ) => (
+    <View style={styles.inputContainer}>
+      <Text style={styles.label}>{label}</Text>
+      {imageUri ? (
+        <View style={styles.imagePreviewContainer}>
+          <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+          <TouchableOpacity
+            style={styles.removeImageButton}
+            onPress={() => {
+              if (label.includes('License')) {
+                setLicenseData(prev => ({ ...prev, licenseImage: null }));
+              } else {
+                setCertificationData(prev => ({ ...prev, certImage: null }));
+              }
+            }}
+          >
+            <Ionicons name="close-circle" size={24} color="#FF3B30" />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.imagePickerButtons}>
+          <TouchableOpacity
+            style={styles.imagePickerButton}
+            onPress={onPress}
+          >
+            <Ionicons name="image-outline" size={20} color="#0065FF" />
+            <Text style={styles.imagePickerText}>Choose Photo</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.imagePickerButton}
+            onPress={onCameraPress}
+          >
+            <Ionicons name="camera-outline" size={20} color="#0065FF" />
+            <Text style={styles.imagePickerText}>Take Photo</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    </View>
+  );
+
   // Progress bar
   const renderProgressBar = () => (
     <View style={styles.progressContainer}>
@@ -306,7 +690,7 @@ export default function SignUpScreen() {
         <View
           style={[
             styles.progressFill,
-            { width: `${((step - 1) / 2) * 100}%` }
+            { width: `${((step - 1) / 4) * 100}%` }
           ]}
         />
       </View>
@@ -323,17 +707,27 @@ export default function SignUpScreen() {
           <View style={[styles.stepCircle, step >= 3 ? styles.activeStep : null]}>
             <Text style={[styles.stepNumber, step >= 3 ? styles.activeStepNumber : null]}>3</Text>
           </View>
+          <View style={styles.stepLine} />
+          <View style={[styles.stepCircle, step >= 4 ? styles.activeStep : null]}>
+            <Text style={[styles.stepNumber, step >= 4 ? styles.activeStepNumber : null]}>4</Text>
+          </View>
+          <View style={styles.stepLine} />
+          <View style={[styles.stepCircle, step >= 5 ? styles.activeStep : null]}>
+            <Text style={[styles.stepNumber, step >= 5 ? styles.activeStepNumber : null]}>5</Text>
+          </View>
         </View>
         <View style={styles.stepLabelRow}>
           <Text style={[styles.stepLabel, step === 1 ? styles.activeStepLabel : null]}>Account</Text>
           <Text style={[styles.stepLabel, step === 2 ? styles.activeStepLabel : null]}>Personal</Text>
           <Text style={[styles.stepLabel, step === 3 ? styles.activeStepLabel : null]}>Professional</Text>
+          <Text style={[styles.stepLabel, step === 4 ? styles.activeStepLabel : null]}>License</Text>
+          <Text style={[styles.stepLabel, step === 5 ? styles.activeStepLabel : null]}>Certification</Text>
         </View>
       </View>
     </View>
   );
 
-  // Render account form
+  // Render form steps
   const renderAccountForm = () => (
     <View style={styles.formContainer}>
       <Text style={styles.formTitle}>Create your account</Text>
@@ -365,7 +759,6 @@ export default function SignUpScreen() {
     </View>
   );
 
-  // Render personal info form
   const renderPersonalForm = () => (
     <View style={styles.formContainer}>
       <Text style={styles.formTitle}>Personal Information</Text>
@@ -395,7 +788,6 @@ export default function SignUpScreen() {
     </View>
   );
 
-  // Render professional info form
   const renderProfessionalForm = () => (
     <View style={styles.formContainer}>
       <Text style={styles.formTitle}>Professional Details</Text>
@@ -536,6 +928,104 @@ export default function SignUpScreen() {
     </View>
   );
 
+  // Render license form
+  const renderLicenseForm = () => (
+    <View style={styles.formContainer}>
+      <Text style={styles.formTitle}>Nursing License</Text>
+      
+      {renderDropdown(
+        'License Type',
+        LICENSE_TYPES,
+        licenseData.licenseType,
+        (value) => updateLicenseData('licenseType', value),
+        licenseErrors.licenseType
+      )}
+      
+      {renderInput(
+        'License Number',
+        licenseData.licenseNumber,
+        'Enter license number',
+        (value) => updateLicenseData('licenseNumber', value),
+        licenseErrors.licenseNumber
+      )}
+      
+      {renderDropdown(
+        'State',
+        STATES,
+        licenseData.state,
+        (value) => updateLicenseData('state', value),
+        licenseErrors.state
+      )}
+      
+      {renderDatePicker(
+        'Expiration Date',
+        licenseData.expiryDate,
+        () => showDatePickerModal('licenseExpiry'),
+        licenseErrors.expiryDate as string
+      )}
+      
+      {renderImagePicker(
+        'License Image',
+        licenseData.licenseImage,
+        () => pickImage('license'),
+        () => takePhoto('license'),
+        licenseErrors.licenseImage
+      )}
+      
+      <View style={styles.infoBox}>
+        <Ionicons name="information-circle-outline" size={20} color="#0065FF" />
+        <Text style={styles.infoText}>
+          Upload a clear photo of your nursing license. This will be verified before you can start accepting shifts.
+        </Text>
+      </View>
+    </View>
+  );
+
+  // Render certification form
+  const renderCertificationForm = () => (
+    <View style={styles.formContainer}>
+      <Text style={styles.formTitle}>Certification</Text>
+      
+      {renderDropdown(
+        'Certification Name',
+        CERTIFICATION_TYPES,
+        certificationData.certName,
+        (value) => updateCertificationData('certName', value),
+        certificationErrors.certName
+      )}
+      
+      {renderDropdown(
+        'Issuing Body',
+        ISSUING_BODIES,
+        certificationData.issuingBody,
+        (value) => updateCertificationData('issuingBody', value),
+        certificationErrors.issuingBody
+      )}
+      
+      {renderDatePicker(
+        'Expiration Date',
+        certificationData.expiryDate,
+        () => showDatePickerModal('certExpiry'),
+        certificationErrors.expiryDate as string
+      )}
+      
+      {renderImagePicker(
+        'Certification Image',
+        certificationData.certImage,
+        () => pickImage('certification'),
+        () => takePhoto('certification'),
+        certificationErrors.certImage
+      )}
+      
+      <View style={styles.infoBox}>
+        <Ionicons name="information-circle-outline" size={20} color="#0065FF" />
+        <Text style={styles.infoText}>
+          Upload a clear photo of your certification. This helps facilities verify your qualifications.
+        </Text>
+      </View>
+    </View>
+  );
+
   // Main render
   return (
     <KeyboardAvoidingView
@@ -560,6 +1050,8 @@ export default function SignUpScreen() {
           {step === 1 && renderAccountForm()}
           {step === 2 && renderPersonalForm()}
           {step === 3 && renderProfessionalForm()}
+          {step === 4 && renderLicenseForm()}
+          {step === 5 && renderCertificationForm()}
 
           <View style={styles.buttonsContainer}>
             {step > 1 && (
@@ -571,7 +1063,7 @@ export default function SignUpScreen() {
               </TouchableOpacity>
             )}
             
-            {step < 3 ? (
+            {step < 5 ? (
               <TouchableOpacity
                 style={[styles.nextStepButton, step > 1 ? { flex: 1 } : {}]}
                 onPress={handleNextStep}
@@ -601,6 +1093,22 @@ export default function SignUpScreen() {
           </TouchableOpacity>
         </View>
       </SafeAreaView>
+
+      {/* Date Picker Modal */}
+      {showDatePicker && (
+        <DateTimePicker
+          testID="dateTimePicker"
+          value={
+            currentDateField === 'licenseExpiry' 
+              ? licenseData.expiryDate 
+              : certificationData.expiryDate
+          }
+          mode="date"
+          display="default"
+          onChange={onDateChange}
+          minimumDate={new Date()}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -666,9 +1174,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   stepCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: '#F5F7FF',
     borderWidth: 1,
     borderColor: '#D1D5DB',
@@ -680,7 +1188,7 @@ const styles = StyleSheet.create({
     borderColor: '#006AFF',
   },
   stepNumber: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#6B7280',
   },
@@ -694,10 +1202,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   stepLabel: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#6B7280',
     textAlign: 'center',
-    width: '33%',
+    width: '20%',
   },
   activeStepLabel: {
     color: '#006AFF',
@@ -727,6 +1235,15 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     borderRadius: 12,
     padding: 16,
+    fontSize: 16,
+    color: '#1E2022',
+  },
+  dateInput: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dateText: {
     fontSize: 16,
     color: '#1E2022',
   },
@@ -901,4 +1418,80 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
+  imagePickerButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  imagePickerButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingVertical: 12,
+    marginHorizontal: 4,
+  },
+  imagePickerText: {
+    fontSize: 14,
+    color: '#006AFF',
+    marginLeft: 8,
+  },
+  imagePreviewContainer: {
+    position: 'relative',
+    marginBottom: 12,
+  },
+  imagePreview: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: 15,
+    padding: 4,
+  },
+  infoBox: {
+    flexDirection: 'row',
+    backgroundColor: '#F0F7FF',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#374151',
+    marginLeft: 8,
+  },
+  dropdownContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dropdownItem: {
+    marginRight: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+  },
+  dropdownItemSelected: {
+    borderColor: '#006AFF',
+    backgroundColor: '#EBF5FF',
+  },
+  dropdownItemText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  dropdownItemTextSelected: {
+    color: '#006AFF',
+    fontWeight: '500',
+  }
 });
