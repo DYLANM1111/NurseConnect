@@ -3,12 +3,12 @@ console.log("Loading auth controller...");
 import bcrypt from 'bcrypt';
 
 // Controller for user registration
+// Controller/authController.js
 export const register = async (req, res) => {
-  // Use the global pool that was set in app.js
   const client = await global.pool.connect();
   
   try {
-    // Destructure request body
+    // Destructure request body with nested structure
     const { 
       email, 
       password, 
@@ -16,12 +16,9 @@ export const register = async (req, res) => {
       lastName, 
       phoneNumber, 
       role,
-      specialty,
-      yearsExperience,
-      preferredShiftTypes,
-      preferredDistance,
-      minHourlyRate,
-      maxHourlyRate
+      nurseProfile,  // This is the nested object
+      licenses,      // This is an array
+      certifications // This is an array
     } = req.body;
     
     // Validate required fields
@@ -71,8 +68,11 @@ export const register = async (req, res) => {
     const newUser = userResult.rows[0];
     
     // If user is a nurse, create nurse profile
-    if (role === 'nurse') {
+    if (role === 'nurse' && nurseProfile) {
       // Validate nurse-specific fields
+      const { specialty, yearsExperience, preferredShiftTypes, 
+              preferredDistance, minHourlyRate, maxHourlyRate } = nurseProfile;
+              
       if (!specialty || !yearsExperience || !preferredShiftTypes || 
           !preferredDistance || !minHourlyRate || !maxHourlyRate) {
         await client.query('ROLLBACK');
@@ -99,14 +99,83 @@ export const register = async (req, res) => {
           newUser.id,
           specialty,
           parseInt(yearsExperience),
-          preferredShiftTypes, // This should be an array
+          preferredShiftTypes,
           parseInt(preferredDistance),
           parseFloat(minHourlyRate),
           parseFloat(maxHourlyRate)
         ]
       );
       
-      newUser.nurseProfileId = nurseResult.rows[0].id;
+      const nurseProfileId = nurseResult.rows[0].id;
+      newUser.nurseProfileId = nurseProfileId;
+      
+      // Process licenses if provided
+      if (licenses && licenses.length > 0) {
+        for (const license of licenses) {
+          const { licenseType, licenseNumber, state, expiryDate } = license;
+          
+          if (!licenseType || !licenseNumber || !state || !expiryDate) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({
+              success: false,
+              error: 'Please provide all required license fields'
+            });
+          }
+          
+          await client.query(
+            `INSERT INTO licenses (
+              nurse_id,
+              license_type,
+              license_number,
+              state,
+              expiry_date,
+              status
+            )
+            VALUES ($1, $2, $3, $4, $5, $6)`,
+            [
+              nurseProfileId,
+              licenseType,
+              licenseNumber,
+              state,
+              expiryDate,
+              'active'
+            ]
+          );
+        }
+      }
+      
+      // Process certifications if provided
+      if (certifications && certifications.length > 0) {
+        for (const cert of certifications) {
+          const { certificationName, issuingBody, expiryDate } = cert;
+          
+          if (!certificationName || !issuingBody || !expiryDate) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({
+              success: false,
+              error: 'Please provide all required certification fields'
+            });
+          }
+          
+          await client.query(
+            `INSERT INTO certifications (
+              nurse_id,
+              certification_name,
+              issuing_body,
+              expiry_date,
+              status
+            )
+            VALUES ($1, $2, $3, $4, $5)`,
+            [
+              nurseProfileId,
+              certificationName,
+              issuingBody,
+              expiryDate,
+              'active'
+            ]
+          );
+        }
+      }
     }
     
     // Commit transaction
@@ -132,7 +201,6 @@ export const register = async (req, res) => {
     client.release();
   }
 };
-
 // Controller for user login
 export const login = async (req, res) => {
   try {

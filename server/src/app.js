@@ -5,8 +5,7 @@ import pkg from 'pg';
 import os from 'os';
 
 import authRoutes from './../Shared/Routes/authRoutes.js';
-
-// Database setup with hardcoded values
+import nurseRoutes from './../Shared/Routes/nurseRoutes.js'
 const { Pool } = pkg;
 const pool = new Pool({
   user: 'dylanmuroki',         
@@ -41,7 +40,21 @@ app.use(express.json());
 
 // Mount routes
 app.use('/api/auth', authRoutes);
+app.use('/api', nurseRoutes);
 
+// In your app.js or main server file
+console.log('Registered routes:');
+app._router.stack.forEach(function(r) {
+  if (r.route && r.route.path) {
+    console.log(`${Object.keys(r.route.methods)} ${r.route.path}`)
+  } else if (r.name === 'router') {
+    r.handle.stack.forEach(function(r) {
+      if (r.route && r.route.path) {
+        console.log(`${Object.keys(r.route.methods)} ${r.route.path}`)
+      }
+    })
+  }
+});
 // Test endpoint
 app.get('/api/test', (req, res) => {
   res.json({ message: 'Server is working' });

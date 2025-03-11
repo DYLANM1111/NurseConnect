@@ -1,7 +1,5 @@
-// app/(tabs)/profile.tsx
 import { useState, useEffect } from 'react';
 import {
-  StyleSheet,
   View,
   Text,
   ScrollView,
@@ -9,29 +7,29 @@ import {
   SafeAreaView,
   Image,
   Alert,
-  Dimensions,
-  ActivityIndicator
+  ActivityIndicator,
+  StyleSheet
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import apiClient from '../api/client';
 
-const { width } = Dimensions.get('window');
-
-// Fallback data (used while loading or if data is missing)
 const DEFAULT_USER_DATA = {
+  id: '',
+  email: '',
   first_name: '',
   last_name: '',
-  title: '',
-  specialty: '',
-  experience: '',
-  email: '',
+  role: '',
   phone_number: '',
+  nurse_profile_id: '',
+  specialty: '',
+  years_experience: 0,
+  preferred_shift_type: [],
+  preferred_distance: 0,
+  min_hourly_rate: '0.00',
+  max_hourly_rate: '0.00',
   licenses: [],
-  certifications: [],
-  preferredShiftTypes: [],
-  preferredDistance: 0,
-  minHourlyRate: 0,
-  maxHourlyRate: 0
+  certifications: []
 };
 
 export default function ProfileScreen() {
@@ -39,8 +37,7 @@ export default function ProfileScreen() {
   const [userData, setUserData] = useState(DEFAULT_USER_DATA);
   const [loading, setLoading] = useState(true);
   const [showAllCerts, setShowAllCerts] = useState(false);
- console.log(userData,'This is the')
-  // Fetch user data when component mounts
+
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -50,55 +47,49 @@ export default function ProfileScreen() {
         if (userDataString) {
           const user = JSON.parse(userDataString);
           console.log('User data loaded:', user);
-          
-          // If the user has a nurse_profile_id, fetch their full profile details
-          // For now, we'll just use the data we have and mock some of the missing fields
-          
-          // Combine user data with additional profile info
-          const enhancedUserData = {
-            ...user,
-            title: user.specialty || 'RN',
-            experience: user.yearsExperience ? `${user.yearsExperience} years` : '',
-            // Mock data for licenses and certifications, to be replaced with API data
-            licenses: [
-              {
-                id: '1',
-                type: 'RN License',
-                number: 'RN 12345678',
-                state: 'CA',
-                expiryDate: '2025-12-31',
-                status: 'active',
-                verificationStatus: 'verified'
-              }
-            ],
-            certifications: [
-              {
-                id: '1',
-                name: 'BLS',
-                issuingBody: 'American Heart Association',
-                expiryDate: '2025-06-30',
-                status: 'active'
-              },
-              {
-                id: '2',
-                name: 'ACLS',
-                issuingBody: 'American Heart Association',
-                expiryDate: '2025-06-30',
-                status: 'active'
-              }
-            ],
-            preferredShifts: user.preferredShiftTypes || [],
-            maxDistanceMiles: user.preferredDistance || 25,
-            hourlyRateRange: {
-              min: user.minHourlyRate || 0,
-              max: user.maxHourlyRate || 0
+
+          try {
+            const response = await apiClient.get(`/nurses/${user.id}/profile`);
+            console.log('Fetched profile data:', response.data);
+
+            if (response.data && response.data.data) {
+              const profileData = response.data.data;
+
+              setUserData({
+                ...profileData,
+                specialty: profileData.nurseProfile?.specialty || '',
+                years_experience: profileData.nurseProfile?.yearsExperience || 0,
+                preferred_shift_type: profileData.nurseProfile?.preferredShiftTypes || [],
+                preferred_distance: profileData.nurseProfile?.preferredDistance || 25,
+                min_hourly_rate: profileData.nurseProfile?.hourlyRateRange?.min || '0.00',
+                max_hourly_rate: profileData.nurseProfile?.hourlyRateRange?.max || '0.00',
+                licenses: profileData.licenses || [],
+                certifications: profileData.certifications || []
+              });
+            } else {
+              console.log('Unexpected API response format. Using cached data.');
+              setUserData({
+                ...user,
+                licenses: [],
+                certifications: []
+              });
             }
-          };
-          
-          setUserData(enhancedUserData);
+          } catch (error) {
+            console.error('Error fetching profile from API:', error);
+            setUserData({
+              ...user,
+              specialty: user.specialty || '',
+              years_experience: user.years_experience || 0,
+              preferred_shift_type: user.preferred_shift_type || [],
+              preferred_distance: user.preferred_distance || 25,
+              min_hourly_rate: user.min_hourly_rate || '0.00',
+              max_hourly_rate: user.max_hourly_rate || '0.00',
+              licenses: [],
+              certifications: []
+            });
+          }
         } else {
-          // No user data found, redirect to login
-          console.log('No user data found, redirecting to login test');
+          console.log('No user data found, redirecting to login');
           router.replace('/signin');
         }
       } catch (error) {
@@ -127,16 +118,15 @@ export default function ProfileScreen() {
     const expiryDate = new Date(date);
     const today = new Date();
     const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     if (daysUntilExpiry < 0) return 'expired';
     if (daysUntilExpiry < 30) return 'expiring';
     return 'valid';
   };
 
-  // Show loading indicator while fetching data
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, styles.loadingContainer]}>
+      <SafeAreaView style={styles.container}>
         <ActivityIndicator size="large" color="#0065FF" />
         <Text style={styles.loadingText}>Loading your profile...</Text>
       </SafeAreaView>
@@ -148,219 +138,77 @@ export default function ProfileScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profile & Credentials</Text>
-        <TouchableOpacity 
-          style={styles.settingsButton}
-          onPress={() => router.push('/settings')}
-        >
+        <TouchableOpacity onPress={() => router.push('/(tabs)/settings')}>
           <Text style={styles.settingsButtonText}>Settings</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content}>
         {/* Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.profileHeader}>
-            <Image
-              source={require('../../assets/images/dog3.jpg')}
-              style={styles.profileImage}
-            />
+            <Image source={require('../../assets/images/dog3.jpg')} style={styles.profileImage} />
             <View style={styles.profileInfo}>
-              <Text style={styles.name}>{userData.first_name} {userData.last_name}</Text>
-              <Text style={styles.title}>{userData.title}</Text>
-              <Text style={styles.specialty}>{userData.specialty}</Text>
+              <Text style={styles.name}>
+                {userData?.first_name} {userData?.last_name}
+              </Text>
+              <Text style={styles.title}>{userData?.role}</Text>
+              <Text style={styles.specialty}>{userData?.specialty}</Text>
             </View>
           </View>
 
           <View style={styles.infoGrid}>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Experience</Text>
-              <Text style={styles.infoValue}>{userData.experience || 'Not specified'}</Text>
+              <Text style={styles.infoValue}>{userData?.years_experience} years</Text>
             </View>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Preferred Rate</Text>
               <Text style={styles.infoValue}>
-                ${userData.minHourlyRate}-{userData.maxHourlyRate}/hr
+                ${userData?.min_hourly_rate} - ${userData?.max_hourly_rate}/hr
               </Text>
             </View>
           </View>
 
-          <TouchableOpacity 
-            style={styles.editProfileButton}
-            onPress={() => router.push('/profile/edit')}
-          >
+          <TouchableOpacity onPress={() => router.push('/(tabs)/profile/edit')}>
             <Text style={styles.editProfileButtonText}>Edit Profile</Text>
           </TouchableOpacity>
         </View>
 
-        {/* License Section */}
+        {/* Licenses Section */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Nursing License</Text>
-            <TouchableOpacity onPress={handleUploadDocument}>
-              <Text style={styles.uploadText}>Upload</Text>
-            </TouchableOpacity>
-          </View>
-
-          {userData.licenses && userData.licenses.length > 0 ? (
-            userData.licenses.map((license) => (
-              <View key={license.id} style={styles.licenseCard}>
-                <View style={styles.licenseHeader}>
-                  <Text style={styles.licenseTitle}>{license.type}</Text>
-                  <View style={[
-                    styles.statusTag,
-                    getExpiryStatus(license.expiryDate) === 'valid' && styles.validTag,
-                    getExpiryStatus(license.expiryDate) === 'expiring' && styles.expiringTag,
-                    getExpiryStatus(license.expiryDate) === 'expired' && styles.expiredTag,
-                  ]}>
-                    <Text style={[
-                      styles.statusText,
-                      getExpiryStatus(license.expiryDate) === 'valid' && styles.validText,
-                      getExpiryStatus(license.expiryDate) === 'expiring' && styles.expiringText,
-                      getExpiryStatus(license.expiryDate) === 'expired' && styles.expiredText,
-                    ]}>
-                      {getExpiryStatus(license.expiryDate) === 'valid' ? 'Active' :
-                      getExpiryStatus(license.expiryDate) === 'expiring' ? 'Expiring Soon' :
-                      'Expired'}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={styles.licenseNumber}>License # {license.number}</Text>
-                <Text style={styles.licenseState}>State: {license.state}</Text>
-                <Text style={styles.expiryDate}>Expires: {new Date(license.expiryDate).toLocaleDateString()}</Text>
-                
-                <TouchableOpacity 
-                  style={styles.documentButton}
-                  onPress={() => console.log('View document')}
-                >
-                  <Text style={styles.documentButtonText}>View Document</Text>
-                </TouchableOpacity>
-              </View>
-            ))
-          ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>No licenses added yet</Text>
-              <TouchableOpacity 
-                style={styles.addButton}
-                onPress={handleUploadDocument}
-              >
-                <Text style={styles.addButtonText}>Add License</Text>
-              </TouchableOpacity>
+          <Text style={styles.sectionTitle}>Licenses</Text>
+          {userData.licenses.map((license) => (
+            <View key={license.id} style={styles.licenseCard}>
+              <Text style={styles.licenseTitle}>{license.license_type}</Text>
+              <Text style={styles.licenseNumber}>License #: {license.license_number}</Text>
+              <Text style={styles.licenseState}>State: {license.state}</Text>
+              <Text style={styles.expiryDate}>
+                Expires: {new Date(license.expiry_date).toLocaleDateString()}
+              </Text>
             </View>
-          )}
+          ))}
         </View>
 
         {/* Certifications Section */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Certifications</Text>
-            <TouchableOpacity onPress={handleUploadDocument}>
-              <Text style={styles.uploadText}>Add New</Text>
-            </TouchableOpacity>
-          </View>
-
-          {userData.certifications && userData.certifications.length > 0 ? (
-            <>
-              {userData.certifications
-                .slice(0, showAllCerts ? undefined : 2)
-                .map((cert) => (
-                  <View key={cert.id} style={styles.certCard}>
-                    <View style={styles.certHeader}>
-                      <Text style={styles.certTitle}>{cert.name}</Text>
-                      <View style={[
-                        styles.statusTag,
-                        getExpiryStatus(cert.expiryDate) === 'valid' && styles.validTag,
-                        getExpiryStatus(cert.expiryDate) === 'expiring' && styles.expiringTag,
-                        getExpiryStatus(cert.expiryDate) === 'expired' && styles.expiredTag,
-                      ]}>
-                        <Text style={[
-                          styles.statusText,
-                          getExpiryStatus(cert.expiryDate) === 'valid' && styles.validText,
-                          getExpiryStatus(cert.expiryDate) === 'expiring' && styles.expiringText,
-                          getExpiryStatus(cert.expiryDate) === 'expired' && styles.expiredText,
-                        ]}>
-                          {getExpiryStatus(cert.expiryDate) === 'valid' ? 'Active' :
-                          getExpiryStatus(cert.expiryDate) === 'expiring' ? 'Expiring Soon' :
-                          'Expired'}
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={styles.certIssuer}>{cert.issuingBody}</Text>
-                    <Text style={styles.expiryDate}>Expires: {new Date(cert.expiryDate).toLocaleDateString()}</Text>
-                    
-                    <TouchableOpacity 
-                      style={styles.documentButton}
-                      onPress={() => console.log('View certification')}
-                    >
-                      <Text style={styles.documentButtonText}>View Certificate</Text>
-                    </TouchableOpacity>
-                  </View>
-              ))}
-
-              {userData.certifications.length > 2 && (
-                <TouchableOpacity 
-                  style={styles.showMoreButton}
-                  onPress={() => setShowAllCerts(!showAllCerts)}
-                >
-                  <Text style={styles.showMoreText}>
-                    {showAllCerts ? 'Show Less' : 'Show All Certifications'}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </>
-          ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>No certifications added yet</Text>
-              <TouchableOpacity 
-                style={styles.addButton}
-                onPress={handleUploadDocument}
-              >
-                <Text style={styles.addButtonText}>Add Certification</Text>
-              </TouchableOpacity>
+          <Text style={styles.sectionTitle}>Certifications</Text>
+          {userData.certifications.map((cert) => (
+            <View key={cert.id} style={styles.certCard}>
+              <Text style={styles.certTitle}>{cert.certification_name}</Text>
+              <Text style={styles.certIssuer}>{cert.issuing_body}</Text>
+              <Text style={styles.expiryDate}>
+                Expires: {new Date(cert.expiry_date).toLocaleDateString()}
+              </Text>
             </View>
-          )}
+          ))}
         </View>
 
         {/* Preferences Section */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Preferences</Text>
-            <TouchableOpacity onPress={() => router.push('/preferences')}>
-              <Text style={styles.uploadText}>Edit</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.preferencesCard}>
-            <View style={styles.preferenceItem}>
-              <Text style={styles.preferenceLabel}>Preferred Shifts</Text>
-              <View style={styles.shiftTags}>
-                {userData.preferredShifts && userData.preferredShifts.length > 0 ? (
-                  userData.preferredShifts.map((shift, index) => (
-                    <View key={index} style={styles.shiftTag}>
-                      <Text style={styles.shiftTagText}>{shift}</Text>
-                    </View>
-                  ))
-                ) : (
-                  <Text style={styles.noPreferenceText}>No preferences set</Text>
-                )}
-              </View>
-            </View>
-            
-            <View style={styles.divider} />
-            
-            <View style={styles.preferenceItem}>
-              <Text style={styles.preferenceLabel}>Maximum Distance</Text>
-              <Text style={styles.preferenceValue}>{userData.maxDistanceMiles} miles</Text>
-            </View>
-            
-            <View style={styles.divider} />
-            
-            <View style={styles.preferenceItem}>
-              <Text style={styles.preferenceLabel}>Hourly Rate Range</Text>
-              <Text style={styles.preferenceValue}>
-                ${userData.hourlyRateRange.min} - ${userData.hourlyRateRange.max}
-              </Text>
-            </View>
-          </View>
+          <Text style={styles.sectionTitle}>Preferences</Text>
+          <Text>Preferred Distance: {userData?.preferred_distance} miles</Text>
+          <Text>Hourly Rate: ${userData?.min_hourly_rate} - ${userData?.max_hourly_rate}/hr</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -492,7 +340,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  // Continuing the styles...
   licenseCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,

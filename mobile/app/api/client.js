@@ -23,16 +23,22 @@ apiClient.interceptors.request.use(async (config) => {
 // Authentication API
 export const authAPI = {
   // Register new user
-  register: async (userData) => {
-    try {
-      console.log('Making registration request to:', apiBaseUrl + '/auth/register');
-      const response = await apiClient.post('/auth/register', userData);
-      return response.data;
-    } catch (error) {
-      console.error('Registration error:', error.response?.data || error.message);
-      throw error.response?.data?.error || 'Registration failed. Please try again.';
+// Updated register method in authAPI
+register: async (userData) => {
+  try {
+    console.log('Making registration request to:', apiBaseUrl + '/auth/register');
+    const response = await apiClient.post('/auth/register', userData);
+    
+    if (response.data.user) {
+      await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
     }
-  },
+    
+    return response.data;
+  } catch (error) {
+    console.error('Registration error:', error.response?.data || error.message);
+    throw error.response?.data?.error || 'Registration failed. Please try again.';
+  }
+},
   
   // Login
   login: async (email, password) => {

@@ -17,104 +17,15 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { authAPI } from '../api/client';
-// Types
-type AccountFormData = {
-  email: string;
-  password: string;
-  confirmPassword: string;
-};
+import apiClient, { authAPI } from '../api/client';
+import * as signUpTypes from '../types/signUpTypes'
 
-type PersonalFormData = {
-  firstName: string;
-  lastName: string;
-  phoneNumber: string;
-};
-
-type ProfessionalFormData = {
-  specialty: string;
-  yearsExperience: string;
-  preferredShiftTypes: string[];
-  preferredDistance: string;
-  minHourlyRate: string;
-  maxHourlyRate: string;
-};
-
-type LicenseFormData = {
-  licenseType: string;
-  licenseNumber: string;
-  state: string;
-  expiryDate: Date;
-  licenseImage: string | null;
-};
-
-type CertificationFormData = {
-  certName: string;
-  issuingBody: string;
-  expiryDate: Date;
-  certImage: string | null;
-};
-
-// Available shift types
-const SHIFT_TYPES = ['Day', 'Night', 'Evening', 'Weekend', 'On-Call'];
-
-// Available specialties
-const SPECIALTIES = [
-  'Registered Nurse (RN)',
-  'Licensed Practical Nurse (LPN)',
-  'Certified Nursing Assistant (CNA)',
-  'Emergency Department',
-  'Intensive Care Unit (ICU)',
-  'Pediatric',
-  'Operating Room',
-  'Maternity',
-  'Geriatric',
-  'Psychiatric',
-  'Other'
-];
-
-// States for license dropdown
-const STATES = [
-  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
-  'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
-  'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
-  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
-  'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
-];
-
-// License types
-const LICENSE_TYPES = [
-  'Registered Nurse (RN)',
-  'Licensed Practical Nurse (LPN)',
-  'Advanced Practice Registered Nurse (APRN)',
-  'Certified Nursing Assistant (CNA)',
-  'Nurse Practitioner (NP)',
-  'Clinical Nurse Specialist (CNS)',
-  'Other'
-];
-
-// Certification types
-const CERTIFICATION_TYPES = [
-  'Basic Life Support (BLS)',
-  'Advanced Cardiac Life Support (ACLS)',
-  'Pediatric Advanced Life Support (PALS)',
-  'Neonatal Resuscitation Program (NRP)',
-  'Trauma Nursing Core Course (TNCC)',
-  'Critical Care Registered Nurse (CCRN)',
-  'Medical-Surgical Nursing Certification (MEDSURG-BC)',
-  'Other'
-];
-
-// Certification issuing bodies
-const ISSUING_BODIES = [
-  'American Heart Association (AHA)',
-  'American Nurses Credentialing Center (ANCC)',
-  'American Association of Critical-Care Nurses (AACN)',
-  'National Council of State Boards of Nursing (NCSBN)',
-  'Emergency Nurses Association (ENA)',
-  'American Red Cross',
-  'Other'
-];
+// Add this interface before your component
+interface ImageDocument {
+  uri: string;
+  name: string;
+  type: string;
+}
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -127,19 +38,19 @@ export default function SignUpScreen() {
   const [datePickerMode, setDatePickerMode] = useState('date');
   const [currentDateField, setCurrentDateField] = useState('');
 
-  const [accountData, setAccountData] = useState<AccountFormData>({
+  const [accountData, setAccountData] = useState<signUpTypes.AccountFormData>({
     email: '',
     password: '',
     confirmPassword: '',
   });
 
-  const [personalData, setPersonalData] = useState<PersonalFormData>({
+  const [personalData, setPersonalData] = useState<signUpTypes.PersonalFormData>({
     firstName: '',
     lastName: '',
     phoneNumber: '',
   });
 
-  const [professionalData, setProfessionalData] = useState<ProfessionalFormData>({
+  const [professionalData, setProfessionalData] = useState<signUpTypes.ProfessionalFormData>({
     specialty: '',
     yearsExperience: '',
     preferredShiftTypes: [],
@@ -148,7 +59,7 @@ export default function SignUpScreen() {
     maxHourlyRate: '',
   });
 
-  const [licenseData, setLicenseData] = useState<LicenseFormData>({
+  const [licenseData, setLicenseData] = useState<signUpTypes.LicenseFormData>({
     licenseType: '',
     licenseNumber: '',
     state: '',
@@ -156,7 +67,7 @@ export default function SignUpScreen() {
     licenseImage: null,
   });
 
-  const [certificationData, setCertificationData] = useState<CertificationFormData>({
+  const [certificationData, setCertificationData] = useState<signUpTypes.CertificationFormData>({
     certName: '',
     issuingBody: '',
     expiryDate: new Date(new Date().setFullYear(new Date().getFullYear() + 2)),
@@ -206,7 +117,7 @@ export default function SignUpScreen() {
   };
 
   // Take a photo with camera
-  const takePhoto = async (for_field) => {
+  const takePhoto = async (for_field:any) => {
     try {
       // Request camera permissions
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -265,7 +176,7 @@ export default function SignUpScreen() {
   };
 
   // Update form data
-  const updateAccountData = (key: keyof AccountFormData, value: string) => {
+  const updateAccountData = (key: keyof signUpTypes.AccountFormData, value: string) => {
     setAccountData((prev) => ({ ...prev, [key]: value }));
     if (accountErrors[key]) {
       setAccountErrors((prev) => {
@@ -276,7 +187,7 @@ export default function SignUpScreen() {
     }
   };
 
-  const updatePersonalData = (key: keyof PersonalFormData, value: string) => {
+  const updatePersonalData = (key: keyof signUpTypes.PersonalFormData, value: string) => {
     setPersonalData((prev) => ({ ...prev, [key]: value }));
     if (personalErrors[key]) {
       setPersonalErrors((prev) => {
@@ -287,7 +198,7 @@ export default function SignUpScreen() {
     }
   };
 
-  const updateProfessionalData = (key: keyof ProfessionalFormData, value: any) => {
+  const updateProfessionalData = (key: keyof signUpTypes.ProfessionalFormData, value: any) => {
     setProfessionalData((prev) => ({ ...prev, [key]: value }));
     if (professionalErrors[key]) {
       setProfessionalErrors((prev) => {
@@ -298,7 +209,7 @@ export default function SignUpScreen() {
     }
   };
 
-  const updateLicenseData = (key: keyof LicenseFormData, value: any) => {
+  const updateLicenseData = (key: keyof signUpTypes.LicenseFormData, value: any) => {
     setLicenseData((prev) => ({ ...prev, [key]: value }));
     if (licenseErrors[key]) {
       setLicenseErrors((prev) => {
@@ -309,7 +220,7 @@ export default function SignUpScreen() {
     }
   };
 
-  const updateCertificationData = (key: keyof CertificationFormData, value: any) => {
+  const updateCertificationData = (key: keyof signUpTypes.CertificationFormData, value: any) => {
     setCertificationData((prev) => ({ ...prev, [key]: value }));
     if (certificationErrors[key]) {
       setCertificationErrors((prev) => {
@@ -479,11 +390,10 @@ export default function SignUpScreen() {
     if (!validateCertificationData()) {
       return;
     }
-  
+
     setLoading(true);
-  
+
     try {
-      // Combine all form data
       const userData = {
         email: accountData.email,
         password: accountData.password,
@@ -491,49 +401,45 @@ export default function SignUpScreen() {
         lastName: personalData.lastName,
         phoneNumber: personalData.phoneNumber,
         role: 'nurse',
-        specialty: professionalData.specialty,
-        yearsExperience: professionalData.yearsExperience,
-        preferredShiftTypes: professionalData.preferredShiftTypes,
-        preferredDistance: professionalData.preferredDistance,
-        minHourlyRate: professionalData.minHourlyRate,
-        maxHourlyRate: professionalData.maxHourlyRate,
-        license: {
-          type: licenseData.licenseType,
-          number: licenseData.licenseNumber,
-          state: licenseData.state,
-          expiryDate: licenseData.expiryDate.toISOString().split('T')[0],
-          imagePath: licenseData.licenseImage
+        nurseProfile: {
+          specialty: professionalData.specialty,
+          yearsExperience: professionalData.yearsExperience,
+          preferredShiftTypes: professionalData.preferredShiftTypes,
+          preferredDistance: professionalData.preferredDistance,
+          minHourlyRate: professionalData.minHourlyRate,
+          maxHourlyRate: professionalData.maxHourlyRate
         },
-        certification: {
-          name: certificationData.certName,
-          issuingBody: certificationData.issuingBody,
-          expiryDate: certificationData.expiryDate.toISOString().split('T')[0],
-          imagePath: certificationData.certImage
-        }
+        licenses: [
+          {
+            licenseType: licenseData.licenseType,
+            licenseNumber: licenseData.licenseNumber,
+            state: licenseData.state,
+            expiryDate: licenseData.expiryDate.toISOString().split('T')[0]
+          }
+        ],
+        certifications: [
+          {
+            certificationName: certificationData.certName,
+            issuingBody: certificationData.issuingBody,
+            expiryDate: certificationData.expiryDate.toISOString().split('T')[0]
+          }
+        ]
       };
-  
+
       console.log('User data to be submitted:', userData);
       
-      // Make the actual API call to the backend
-      // You'll need to modify your backend to accept the license and certification data
-      // You'll also need to handle image uploads - this might require a different approach
-      // like form data or a dedicated image upload endpoint
-      
-      // For this example, let's assume our authAPI has been updated to handle this
+      // Register the user
       const response = await authAPI.register(userData);
-      
       console.log('Registration response:', response);
-      
+       
       // Show success message and navigate
       Alert.alert(
         "Registration Successful",
         "Your account has been created. You can now sign in.",
-        [
-          { 
-            text: "OK", 
-            onPress: () => router.replace('/signin')
-          }
-        ]
+        [{ 
+          text: "OK", 
+          onPress: () => router.replace('/signin')
+        }]
       );
     } catch (error) {
       console.error('Registration error:', error);
@@ -543,6 +449,81 @@ export default function SignUpScreen() {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Helper function to upload images
+  const uploadImage = async (imageUri:any, endpoint:any) => {
+    try {
+      // Create form data for image upload
+      const formData = new FormData();
+      const uriParts = imageUri.split('/');
+      const fileName = uriParts[uriParts.length - 1];
+      
+      formData.append('document', {
+        uri: imageUri,
+        name: fileName,
+        type: 'image/jpeg'
+      } as unknown as Blob);
+      
+      // Upload image
+      await apiClient.post(endpoint, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw new Error('Failed to upload document image');
+    }
+  };
+
+  // Helper function to upload license image
+  const uploadLicenseImage = async (nurseId:any, imageUri:any, licenseId:any) => {
+    const formData = new FormData();
+    const uriParts = imageUri.split('/');
+    const fileName = uriParts[uriParts.length - 1];
+    
+    formData.append('document', {
+      uri: imageUri,
+      name: fileName,
+      type: 'image/jpeg' // Adjust if needed based on image type
+    });
+    
+    try {
+      await apiClient.put(`/licenses/${licenseId}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    } catch (error) {
+      console.error('Error uploading license image:', error);
+      throw new Error('Failed to upload license image');
+    }
+  };
+
+  // Helper function to upload certification image
+  const uploadCertificationImage = async (nurseId:any, imageUri:any, certId:any) => {
+    const formData = new FormData();
+    // Extract filename from URI
+    const uriParts = imageUri.split('/');
+    const fileName = uriParts[uriParts.length - 1];
+    
+    formData.append('document', {
+      uri: imageUri,
+      name: fileName,
+      type: 'image/jpeg' // Adjust if needed based on image type
+    });
+    
+    try {
+      await apiClient.put(`/certifications/${certId}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    } catch (error) {
+      console.error('Error uploading certification image:', error);
+      throw new Error('Failed to upload certification image');
     }
   };
 
@@ -800,7 +781,7 @@ export default function SignUpScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.specialtyScrollContent}
           >
-            {SPECIALTIES.map(specialty => (
+            {signUpTypes.SPECIALTIES.map(specialty => (
               <TouchableOpacity
                 key={specialty}
                 style={[
@@ -839,7 +820,7 @@ export default function SignUpScreen() {
       <View style={styles.inputContainer}>
         <Text style={styles.label}>Preferred Shift Types</Text>
         <View style={styles.shiftTypeContainer}>
-          {SHIFT_TYPES.map((type) => (
+          {signUpTypes.SHIFT_TYPES.map((type) => (
             <TouchableOpacity
               key={type}
               style={[
@@ -935,7 +916,7 @@ export default function SignUpScreen() {
       
       {renderDropdown(
         'License Type',
-        LICENSE_TYPES,
+        signUpTypes.LICENSE_TYPES,
         licenseData.licenseType,
         (value) => updateLicenseData('licenseType', value),
         licenseErrors.licenseType
@@ -951,7 +932,7 @@ export default function SignUpScreen() {
       
       {renderDropdown(
         'State',
-        STATES,
+        signUpTypes.STATES,
         licenseData.state,
         (value) => updateLicenseData('state', value),
         licenseErrors.state
@@ -988,7 +969,7 @@ export default function SignUpScreen() {
       
       {renderDropdown(
         'Certification Name',
-        CERTIFICATION_TYPES,
+        signUpTypes.CERTIFICATION_TYPES,
         certificationData.certName,
         (value) => updateCertificationData('certName', value),
         certificationErrors.certName
@@ -996,7 +977,7 @@ export default function SignUpScreen() {
       
       {renderDropdown(
         'Issuing Body',
-        ISSUING_BODIES,
+        signUpTypes.ISSUING_BODIES,
         certificationData.issuingBody,
         (value) => updateCertificationData('issuingBody', value),
         certificationErrors.issuingBody

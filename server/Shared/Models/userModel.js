@@ -1,5 +1,5 @@
-import pool from '../../database/config/config';
 import bcrypt from 'bcrypt';
+import pool from '../../src/app.js';
 
 class User {
   static async findByEmail(email) {

@@ -17,7 +17,6 @@ import { Ionicons as Icon } from '@expo/vector-icons';
 import { authAPI } from '../api/client';
 
 
-// Type for navigation
 type NavigationProp = {
   navigate: (screen: string, params?: any) => void;
 };
