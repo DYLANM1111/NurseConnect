@@ -10,9 +10,9 @@ const { Pool } = pkg;
 const pool = new Pool({
   user: 'dylanmuroki',         
   database: 'nurseconnect',   
-  host: 'localhost',          
+  host: '127.0.0.1',          
   port: 5432,                  
-  password: '', // Leave blank if no password is set
+  password: '', 
 });
 
 // Test database connection
@@ -84,5 +84,6 @@ Object.keys(networkInterfaces).forEach(interfaceName => {
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port}`);
 });
+export { pool };
 
 export default app;

@@ -1128,7 +1128,6 @@ export default function HomeScreen() {
       <TouchableOpacity 
         style={styles.fab}
         onPress={() => {
-          // Filter button when scrolled down
           if (showFilters) {
             setShowFilters(false);
           } else {

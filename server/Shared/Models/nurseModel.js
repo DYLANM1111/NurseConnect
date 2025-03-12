@@ -1,4 +1,5 @@
 
+import {pool} from '../../src/app.js';
 
 class NurseProfile {
   static async create(nurseProfileData) {

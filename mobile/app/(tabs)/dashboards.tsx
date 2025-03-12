@@ -102,7 +102,7 @@ export default function DashboardScreen() {
   };
 
   const handleViewProfile = () => {
-    router.push('/profile');
+    router.push('/(tabs)/profile');
   };
 
   // Show loading screen while fetching user data

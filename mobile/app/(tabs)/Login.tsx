@@ -39,18 +39,17 @@ const handleLogin = async () => {
   
   try {
     const response = await authAPI.login(email, password);
-    
     console.log('Login successful:', response);
-    
     navigation.navigate('dashboards');
   } catch (error) {
     console.error('Login error:', error);
-    
+    if (typeof error === 'object' && error !== null && 'response' in error) {
+      console.error('Error response:', (error as any).response?.data);
+    }
+  
     Alert.alert(
-      'Login Failed', 
-      typeof error === 'string' 
-        ? error 
-        : 'Unable to login. Please check your credentials and try again.'
+      'Login Failed',
+      (error as any).response?.data?.error || 'Unable to login. Please check your credentials and try again.'
     );
   } finally {
     setIsLoading(false);

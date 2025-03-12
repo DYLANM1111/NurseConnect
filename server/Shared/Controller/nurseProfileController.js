@@ -2,6 +2,9 @@
 import NurseProfile from '../Models/nurseModel.js';
 import License from '../Models/License.js';
 import Certification from '../Models/Certification.js';
+import userModel from '../Models/userModel.js'
+
+
 
 class NurseProfileController {
  
@@ -10,12 +13,10 @@ class NurseProfileController {
       const { userId } = req.params;
       console.log(`Attempting to fetch profile for user ID: ${userId}`);
       
-      // Log before the database query
       console.log("About to execute database query");
       
       const profileData = await NurseProfile.fetchCompleteProfileData(userId);
       
-      // Log the result
       console.log("Database query result:", profileData);
       
       if (!profileData) {
@@ -26,7 +27,6 @@ class NurseProfileController {
         });
       }
       
-      // Define formatting inline to avoid 'this' binding issues
       const formattedProfile = {
         id: profileData.id,
         email: profileData.email,
@@ -49,7 +49,6 @@ class NurseProfileController {
         certifications: profileData.certifications || []
       };
       
-      // Return formatted response
       return res.status(200).json({
         success: true,
         data: formattedProfile
@@ -63,10 +62,8 @@ class NurseProfileController {
       });
     }
   }
-  // Format profile data for consistent API response
   formatProfileData(profileData) {
-    // Transform database field names to camelCase if needed
-    // Add any additional business logic for data formatting
+    
     return {
       id: profileData.id,
       email: profileData.email,
@@ -90,7 +87,6 @@ class NurseProfileController {
     };
   }
   
-  // Create nurse profile with related licenses and certifications
   async createProfile(req, res) {
     try {
       const { userId } = req.params;
@@ -100,7 +96,6 @@ class NurseProfileController {
         certifications = [] 
       } = req.body;
       
-      // First create the nurse profile
       const profileResult = await NurseProfile.create({
         userId,
         ...nurseProfile
@@ -175,7 +170,144 @@ class NurseProfileController {
       });
     }
   }
-  
+
+// Update profile
+
+async updateProfile(userId, profileData) {
+  try {
+    const { nurseProfile, ...userData } = profileData;
+    
+    // Update user basic info (email, phone, etc.)
+    if (userData && Object.keys(userData).length > 0) {
+      console.log('Updating user data:', userData);
+      await userModel.update(userId, userData);
+    }
+    
+    // Update nurse-specific profile data
+    if (nurseProfile) {
+      console.log('Updating nurse profile data:', nurseProfile);
+      
+      // First, get the nurse profile ID for this user
+      const nurseProfileData = await NurseProfile.findByUserId(userId);
+      
+      if (!nurseProfileData) {
+        throw new Error('Nurse profile not found for this user');
+      }
+      
+      // Now update using the profile ID (not the user ID)
+      const profileId = nurseProfileData.id;
+      console.log(`Found nurse profile ID: ${profileId} for user ID: ${userId}`);
+      
+      // Prepare the data for the update method
+      // The NurseProfile.update method expects different property names
+      const updateData = {
+        specialty: nurseProfile.specialty,
+        yearsExperience: nurseProfile.yearsExperience,
+        preferredShiftTypes: nurseProfile.preferredShiftTypes,
+        preferredDistance: nurseProfile.preferredDistance,
+        minHourlyRate: nurseProfile.hourlyRateRange?.min,
+        maxHourlyRate: nurseProfile.hourlyRateRange?.max
+      };
+      
+      await NurseProfile.update(profileId, updateData);
+    }
+    
+    // Get the updated complete profile
+    const completeProfile = await NurseProfile.fetchCompleteProfileData(userId);
+    
+    return this.formatProfileData(completeProfile);
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    throw new Error('Failed to update profile: ' + error.message);
+  }
+}
+// Add a new license
+async addLicense(userId, licenseData) {
+  try {
+    // First get the nurse profile ID from the user ID
+    const nurseProfile = await NurseProfile.findByUserId(userId);
+    
+    if (!nurseProfile) {
+      throw new Error('Nurse profile not found');
+    }
+    
+    // Create the new license
+    const newLicense = await License.create(nurseProfile.id, licenseData);
+    
+    return newLicense;
+  } catch (error) {
+    console.error('Error adding license:', error);
+    throw new Error('Failed to add license: ' + error.message);
+  }
+}
+
+// Delete a license
+async deleteLicense(licenseId) {
+  try {
+    const result = await License.delete(licenseId);
+    
+    if (!result) {
+      throw new Error('License not found');
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error deleting license:', error);
+    throw new Error('Failed to delete license: ' + error.message);
+  }
+}
+
+// Add a new certification
+async addCertification(userId, certData) {
+  try {
+    // First get the nurse profile ID from the user ID
+    const nurseProfile = await NurseProfile.findByUserId(userId);
+    
+    if (!nurseProfile) {
+      throw new Error('Nurse profile not found');
+    }
+    
+    // Create the new certification
+    const newCert = await Certification.create(nurseProfile.id, certData);
+    
+    return newCert;
+  } catch (error) {
+    console.error('Error adding certification:', error);
+    throw new Error('Failed to add certification: ' + error.message);
+  }
+}
+
+// Update a certification
+async updateCertification(certId, certData) {
+  try {
+    const result = await Certification.update(certId, certData);
+    
+    if (!result) {
+      throw new Error('Certification not found');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error updating certification:', error);
+    throw new Error('Failed to update certification: ' + error.message);
+  }
+}
+
+// Delete a certification
+async deleteCertification(certId) {
+  try {
+    const result = await Certification.delete(certId);
+    
+    if (!result) {
+      throw new Error('Certification not found');
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error deleting certification:', error);
+    throw new Error('Failed to delete certification: ' + error.message);
+  }
+}
 }
 
 export default new NurseProfileController();

@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import pool from '../../src/app.js';
+import {pool} from '../../src/app.js';
 
 class User {
   static async findByEmail(email) {
@@ -66,6 +66,59 @@ class User {
     
     const result = await pool.query(query, [userId]);
     return result.rows[0];
+  }
+  static async update(userId, userData) {
+    try {
+      // Create the SET part of the SQL query dynamically based on provided fields
+      const allowedFields = ['email', 'first_name', 'last_name', 'phone_number', 'role'];
+      const updateFields = [];
+      const values = [];
+      
+      // Build the update fields and values arrays
+      let paramCounter = 1;
+      Object.entries(userData).forEach(([key, value]) => {
+        // Convert camelCase to snake_case for DB field names
+        const dbField = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+        
+        if (allowedFields.includes(dbField)) {
+          updateFields.push(`${dbField} = $${paramCounter}`);
+          values.push(value);
+          paramCounter++;
+        }
+      });
+      
+      // If no valid fields to update, return
+      if (updateFields.length === 0) {
+        console.log('No valid fields to update');
+        return null;
+      }
+      
+      // Add the userId as the last parameter
+      values.push(userId);
+      
+      // Create and execute the update query
+      const query = `
+        UPDATE users 
+        SET ${updateFields.join(', ')} 
+        WHERE id = $${paramCounter}
+        RETURNING id, email, first_name, last_name, role, phone_number
+      `;
+      
+      console.log('Executing SQL update:', query, values);
+      
+      // Check how other methods in your User model execute queries
+      // It might be pool.execute instead of pool.query, or it might have a different structure
+      const result = await pool.query(query, values);
+      
+      if (!result.rows || result.rows.length === 0) {
+        throw new Error('User not found or update failed');
+      }
+      
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error in User.update:', error);
+      throw error;
+    }
   }
 }
 

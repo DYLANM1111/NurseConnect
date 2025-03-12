@@ -10,10 +10,8 @@ const uploadDocument = async (req, res) => {
         });
       }
       
-      // Get the file path or cloud storage URL
-      const documentUrl = req.file.path; // Or use your cloud storage logic
+      const documentUrl = req.file.path; 
       
-      // Update the license with the document URL
       const result = await License.update(licenseId, {
         documentUrl
       });

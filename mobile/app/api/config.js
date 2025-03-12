@@ -28,7 +28,7 @@ export const getApiUrl = async () => {
     
     // For physical devices or when we can't determine, use development server IP
     // Using your actual IP address from the server logs
-    const devServerIp = '10.122.150.98'; // Your actual IP address
+    const devServerIp = '192.168.1.251'; // Your actual IP address
     baseUrl = `http://${devServerIp}:${PORT}${API_PATH}`;
     
     return baseUrl;
