@@ -9,12 +9,14 @@ import {
   RefreshControl,
   Image,
   TextInput,
-  Animated,
+  ActivityIndicator,
+  Alert,
   Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
+import { shiftsAPI } from '../api/client';
+import { authAPI } from '../api/client';
 
 type Shift = {
   id: string;
@@ -30,143 +32,7 @@ type Shift = {
   shiftLength: number;
   urgentFill?: boolean;
 };
-const shifts: Shift[] = [
-  {
-    id: '1',
-    hospital: 'Wake Baptist Hospital',
-    unit: 'ICU',
-    date: '2025-02-14',
-    startTime: '07:00',
-    endTime: '19:00',
-    rate: 75.50,
-    distance: '5.2 miles',
-    specialty: 'ICU',
-    facilityRating: 4.5,
-    shiftLength: 12,
-    urgentFill: true
-  },
-  {
-    id: '2',
-    hospital: 'Duke Hospital',
-    unit: 'ER',
-    date: '2025-02-14',
-    startTime: '07:00',
-    endTime: '15:00',
-    rate: 60.00,
-    distance: '7.2 miles',
-    specialty: 'ER',
-    facilityRating: 3.5,
-    shiftLength: 8
-  },
-  {
-    id: '3',
-    hospital: 'WakeMed Hospital',
-    unit: 'OR',
-    date: '2025-02-14',
-    startTime: '07:00',
-    endTime: '19:00',
-    rate: 85.50,
-    distance: '5.2 miles',
-    specialty: 'OR',
-    facilityRating: 4.5,
-    shiftLength: 12
-  },
-  {
-    id: '4',
-    hospital: 'UNC Medical Center',
-    unit: 'Med-Surg',
-    date: '2025-03-06',
-    startTime: '19:00',
-    endTime: '07:00',
-    rate: 72.00,
-    distance: '12.5 miles',
-    specialty: 'Med-Surg',
-    facilityRating: 4.2,
-    shiftLength: 12
-  },
-  {
-    id: '5',
-    hospital: 'Rex Hospital',
-    unit: 'Cardiac',
-    date: '2025-02-15',
-    startTime: '07:00',
-    endTime: '19:00',
-    rate: 78.50,
-    distance: '8.7 miles',
-    specialty: 'Med-Surg',
-    facilityRating: 4.7,
-    shiftLength: 12,
-    urgentFill: true
-  },
-  {
-    id: '6',
-    hospital: 'Novant Health Presbyterian Medical Center',
-    unit: 'Pediatric',
-    date: '2025-02-16',
-    startTime: '07:00',
-    endTime: '19:00',
-    rate: 80.00,
-    distance: '10.3 miles',
-    specialty: 'Pediatric',
-    facilityRating: 4.6,
-    shiftLength: 12
-  },
-  {
-    id: '7',
-    hospital: 'Atrium Health Carolinas Medical Center',
-    unit: 'NICU',
-    date: '2025-02-16',
-    startTime: '19:00',
-    endTime: '07:00',
-    rate: 85.00,
-    distance: '15.0 miles',
-    specialty: 'NICU',
-    facilityRating: 4.8,
-    shiftLength: 12,
-    urgentFill: true
-  },
-  {
-    id: '8',
-    hospital: 'Cone Health Wesley Long Hospital',
-    unit: 'Cardiac',
-    date: '2025-02-17',
-    startTime: '07:00',
-    endTime: '19:00',
-    rate: 77.00,
-    distance: '18.2 miles',
-    specialty: 'Cardiac',
-    facilityRating: 4.4,
-    shiftLength: 12
-  },
-  {
-    id: '9',
-    hospital: 'Mission Hospital',
-    unit: 'ER',
-    date: '2025-02-17',
-    startTime: '07:00',
-    endTime: '15:00',
-    rate: 65.00,
-    distance: '22.5 miles',
-    specialty: 'ER',
-    facilityRating: 4.1,
-    shiftLength: 8
-  },
-  {
-    id: '10',
-    hospital: 'FirstHealth Moore Regional Hospital',
-    unit: 'Med-Surg',
-    date: '2025-02-18',
-    startTime: '07:00',
-    endTime: '19:00',
-    rate: 70.00,
-    distance: '25.0 miles',
-    specialty: 'Med-Surg',
-    facilityRating: 4.3,
-    shiftLength: 12
-  }
-];
 
-// Define styles outside of the component
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -463,9 +329,6 @@ const styles = StyleSheet.create({
   dateButtonNumberActive: {
     color: '#006AFF',
   },
-
-// Additional styles continuing from Part 1
-
   /* Compact specialty filter styles */
   specialtyFiltersContainer: {
     backgroundColor: '#FFFFFF',
@@ -565,7 +428,7 @@ const styles = StyleSheet.create({
   urgentBadge: {
     position: 'absolute',
     bottom: 72,
-    left:80,
+    left: 80,
     backgroundColor: '#EF4444',
     borderRadius: 12,
     paddingHorizontal: 6,
@@ -585,8 +448,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 16,
-    paddingTop:20,
-
+    paddingTop: 20,
   },
   hospitalInfo: {
     flex: 1,
@@ -715,10 +577,57 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 5,
-  }
+  },
+  // New styles for loading and error states
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1E2022',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#006AFF',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
 });
 export default function HomeScreen() {
   const router = useRouter();
+  
+  // State for shifts and loading
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Filtering state
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedSpecialty, setSelectedSpecialty] = useState('All');
   const [refreshing, setRefreshing] = useState(false);
@@ -728,6 +637,42 @@ export default function HomeScreen() {
   const [priceRange, setPriceRange] = useState([40, 100]);
   const [maxDistance, setMaxDistance] = useState(25);
   const [shiftLength, setShiftLength] = useState([8, 12]);
+  const [user, setUser] = useState(null);
+
+
+
+  // Fetch shifts from API
+  const fetchShifts = async () => {
+    try {
+      setLoading(true);
+      const data = await shiftsAPI.getShifts();
+      setShifts(data);
+      setError(null);
+    } catch (error) {
+      console.error('Failed to fetch shifts:', error);
+      setError('Could not load shifts. Please try again later.');
+      setShifts([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+  const fetchCurrentUser = async () => {
+    try {
+      const currentUser = await authAPI.getCurrentUser();
+      setUser(currentUser);
+    } catch (error) {
+      console.error('Error fetching user:', error);
+    }
+  };
+  
+
+  // Load shifts on component mount
+  useEffect(() => {
+    fetchShifts();
+    fetchCurrentUser();
+
+  }, []);
 
   // Filter shifts based on selected criteria
   const filteredShifts = shifts.filter(shift => {
@@ -743,7 +688,7 @@ export default function HomeScreen() {
     const rateMatches = shift.rate >= priceRange[0] && shift.rate <= priceRange[1];
     
     // Filter by distance - parse distance string to get number
-    const distanceValue = parseFloat(shift.distance.split(' ')[0]);
+    const distanceValue = parseFloat(shift.distance?.split(' ')[0] || '0');
     const distanceMatches = distanceValue <= maxDistance;
     
     // Filter by shift length
@@ -795,10 +740,16 @@ export default function HomeScreen() {
     }
   };
 
+  // Handle refreshing
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchShifts();
+  };
+
   const ShiftCard = ({ shift }) => (
     <TouchableOpacity 
       style={[styles.shiftCard, shift.urgentFill && styles.urgentCard]}
-      onPress={() => router.push(`/shift/${shift.id}`)}
+      onPress={() => router.push(`/apply/${shift.id}`)}
     >
       {shift.urgentFill && (
         <View style={styles.urgentBadge}>
@@ -853,8 +804,8 @@ export default function HomeScreen() {
       
       <TouchableOpacity 
         style={styles.applyButton}
-        onPress={() => router.push(`/apply/${shift.id}`)}
-      >
+        onPress={() => router.push(`/apply[id]?id=${shift.id}`)}
+        >
         <Text style={styles.applyButtonText}>Apply</Text>
       </TouchableOpacity>
     </TouchableOpacity>
@@ -884,10 +835,10 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header - Slightly reduced height */}
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <Text style={styles.welcomeText}>Hi, Sarah</Text>
+          <Text style={styles.welcomeText}>Hi, {user ? `${user.first_name}` : 'Guest'}</Text>
           <View style={styles.headerButtons}>
             <TouchableOpacity 
               style={styles.notificationButton}
@@ -912,7 +863,7 @@ export default function HomeScreen() {
         <View style={styles.headerBottom}>
           <Text style={styles.location}>
             <Ionicons name="location" size={16} color="#006AFF" />
-            {' '}San Francisco Bay Area
+            {' '} Piedmont Triad Area
           </Text>
           <TouchableOpacity 
             style={styles.locationButton}
@@ -923,7 +874,7 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Search Bar - Slightly reduced height */}
+      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
           <Ionicons name="search" size={18} color="#6B7280" style={styles.searchIcon} />
@@ -954,7 +905,7 @@ export default function HomeScreen() {
       {/* Expanded Filters */}
       {showFilters && (
         <View style={styles.expandedFilters}>
-          {/* Filter content unchanged */}
+          {/* Filter content */}
           <View style={styles.filterSection}>
             <Text style={styles.filterSectionTitle}>Price Range ($/hr)</Text>
             <View style={styles.priceRangeContainer}>
@@ -986,7 +937,6 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Other filter sections... */}
           <View style={styles.filterActions}>
             <TouchableOpacity 
               style={styles.resetButton}
@@ -1008,113 +958,69 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* Compact Date Selector */}
-      <View style={styles.dateFilterContainer}>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.dateFilters}
-        >
-          {nextSevenDays.map((date, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.dateButton,
-                selectedDate.toDateString() === date.toDateString() && styles.dateButtonActive
-              ]}
-              onPress={() => setSelectedDate(date)}
-            >
-              <Text style={[
-                styles.dateButtonDay,
-                selectedDate.toDateString() === date.toDateString() && styles.dateButtonDayActive
-              ]}>
-                {formatDay(date)}
-              </Text>
-              <Text style={[
-                styles.dateButtonNumber,
-                selectedDate.toDateString() === date.toDateString() && styles.dateButtonNumberActive
-              ]}>
-                {formatDateNumber(date)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      <View style={styles.specialtyFiltersContainer}>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.specialtyFilters}
-        >
-          {['All', 'ICU', 'ER', 'Med-Surg', 'OR', 'Cardiac', 'Pediatric', 'NICU'].map((specialty) => (
-          <TouchableOpacity
-            key={specialty}
-            style={[
-              styles.specialtyButton,
-              selectedSpecialty === specialty && styles.specialtyButtonActive
-            ]}
-            onPress={() => setSelectedSpecialty(specialty)}
-          >
-            <Text style={[
-              styles.specialtyButtonText,
-              selectedSpecialty === specialty && styles.specialtyButtonTextActive
-            ]}>
-              {specialty}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-      </View>
-
-      {/* Main Content Header */}
-      <View style={styles.contentHeader}>
-        <View style={styles.contentTitleContainer}>
-          <Text style={styles.contentTitle}>Available Shifts</Text>
-          <Text style={styles.shiftCount}>
-            {filteredShifts.length} {filteredShifts.length === 1 ? 'shift' : 'shifts'} found
-          </Text>
-        </View>
-        <View style={styles.viewToggle}>
-          <TouchableOpacity 
-            style={[styles.viewToggleButton, viewType === 'list' && styles.viewToggleButtonActive]}
-            onPress={() => setViewType('list')}
-          >
-            <Ionicons 
-              name="list" 
-              size={18} 
-              color={viewType === 'list' ? '#1E2022' : '#6B7280'} 
-            />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.viewToggleButton, viewType === 'calendar' && styles.viewToggleButtonActive]}
-            onPress={() => setViewType('calendar')}
-          >
-            <Ionicons 
-              name="calendar" 
-              size={18} 
-              color={viewType === 'calendar' ? '#1E2022' : '#6B7280'} 
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Shifts List - Now given more prominence */}
+      {/* Main Content */}
       <ScrollView
         style={styles.content}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={() => {
-              setRefreshing(true);
-              // Add refresh logic here
-              setTimeout(() => setRefreshing(false), 1000);
-            }}
+            onRefresh={handleRefresh}
           />
         }
       >
+        {/* Main Content Header */}
+        <View style={styles.contentHeader}>
+          <View style={styles.contentTitleContainer}>
+            <Text style={styles.contentTitle}>Available Shifts</Text>
+            {!loading && (
+              <Text style={styles.shiftCount}>
+                {filteredShifts.length} {filteredShifts.length === 1 ? 'shift' : 'shifts'} found
+              </Text>
+            )}
+          </View>
+          <View style={styles.viewToggle}>
+            <TouchableOpacity 
+              style={[styles.viewToggleButton, viewType === 'list' && styles.viewToggleButtonActive]}
+              onPress={() => setViewType('list')}
+            >
+              <Ionicons 
+                name="list" 
+                size={18} 
+                color={viewType === 'list' ? '#1E2022' : '#6B7280'} 
+              />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.viewToggleButton, viewType === 'calendar' && styles.viewToggleButtonActive]}
+              onPress={() => setViewType('calendar')}
+            >
+              <Ionicons 
+                name="calendar" 
+                size={18} 
+                color={viewType === 'calendar' ? '#1E2022' : '#6B7280'} 
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         <View style={styles.shiftsContainer}>
-          {filteredShifts.length > 0 ? (
+          {loading && !refreshing ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#006AFF" />
+              <Text style={styles.loadingText}>Loading shifts...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.errorContainer}>
+              <Ionicons name="alert-circle-outline" size={60} color="#EF4444" />
+              <Text style={styles.errorTitle}>Unable to load shifts</Text>
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity 
+                style={styles.retryButton}
+                onPress={fetchShifts}
+              >
+                <Text style={styles.retryButtonText}>Try Again</Text>
+              </TouchableOpacity>
+            </View>
+          ) : filteredShifts.length > 0 ? (
             filteredShifts.map((shift) => (
               <ShiftCard key={shift.id} shift={shift} />
             ))

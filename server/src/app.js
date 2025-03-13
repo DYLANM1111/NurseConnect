@@ -6,6 +6,9 @@ import os from 'os';
 
 import authRoutes from './../Shared/Routes/authRoutes.js';
 import nurseRoutes from './../Shared/Routes/nurseRoutes.js'
+import { router as shiftRoutes } from './../Shared/Routes/shiftRoutes.js'
+
+
 const { Pool } = pkg;
 const pool = new Pool({
   user: 'dylanmuroki',         
@@ -41,6 +44,8 @@ app.use(express.json());
 // Mount routes
 app.use('/api/auth', authRoutes);
 app.use('/api', nurseRoutes);
+app.use('/api', shiftRoutes);
+
 
 // In your app.js or main server file
 console.log('Registered routes:');
