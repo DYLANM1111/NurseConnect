@@ -148,15 +148,29 @@ export const shiftsAPI = {
     }
   },
   
-  applyForShift: async (shiftId, applicationData) => {
-    try {
-      const response = await apiClient.post(`shifts/${shiftId}/apply`, applicationData);
-      return response.data;
-    } catch (error) {
-      console.error('Error applying for shift:', error);
-      throw error.response?.data?.error || 'Failed to apply for shift';
+// Apply for a shift
+applyForShift: async (shiftId, applicationData) => {
+  try {
+    const user = await authAPI.getCurrentUser();
+    
+    if (!user || !user.nurse_profile_id) {
+      throw 'User profile not found or incomplete. Please update your profile.';
     }
+    
+    const completeApplicationData = {
+      ...applicationData,
+      nurse_profile_id: user.nurse_profile_id
+    };
+    
+    console.log('Submitting application with data:', completeApplicationData);
+    
+    const response = await apiClient.post(`shifts/${shiftId}/apply`, completeApplicationData);
+    return response.data;
+  } catch (error) {
+    console.error('Error applying for shift:', error);
+    throw error.response?.data?.error || 'Failed to apply for shift';
   }
+}
 };
 
 export default apiClient;

@@ -89,3 +89,60 @@ export const getShiftById = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+export const applyForShift = async (req, res) => {
+  try {
+    const shiftId = req.params.id;
+    const { specialNotes, availabilityConfirmed } = req.body;
+    
+    const nurseId = req.body.nurseId || req.body.nurse_profile_id;
+    
+    if (!nurseId) {
+      return res.status(400).json({ error: 'Nurse profile ID is required' });
+    }
+    
+    console.log(`Processing application for shift ID: ${shiftId} by nurse ID: ${nurseId}`);
+    
+    const shiftResult = await Shift.getById(shiftId);
+    if (!shiftResult || !shiftResult.rows || shiftResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Shift not found' });
+    }
+    
+    // Verify shift is open
+    const shift = shiftResult.rows[0];
+    if (shift.status !== 'open') {
+      return res.status(400).json({ error: 'This shift is no longer available for applications' });
+    }
+    
+    // Check if nurse has already applied to this shift
+    const existingApplication = await Shift.checkExistingApplication(shiftId, nurseId);
+    if (existingApplication && existingApplication.rows && existingApplication.rows.length > 0) {
+      return res.status(409).json({ error: 'You have already applied for this shift' });
+    }
+    
+    const applicationData = {
+      shift_id: shiftId,
+      nurse_id: nurseId,
+      special_notes: specialNotes,
+      availability_confirmed: availabilityConfirmed === true // ensure boolean
+    };
+    
+    const result = await Shift.createApplication(applicationData);
+    
+    if (!result || !result.rows || result.rows.length === 0) {
+      return res.status(500).json({ error: 'Failed to create application' });
+    }
+    
+    const application = result.rows[0];
+    
+    res.status(201).json({
+      id: application.id,
+      status: application.status,
+      created_at: application.created_at,
+      message: 'Application submitted successfully'
+    });
+  } catch (error) {
+    console.error('Error applying for shift:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}

@@ -132,7 +132,6 @@ export default function ApplyShiftScreen() {
     setSubmitting(true);
     
     try {
-      // Try to submit the application to the real API
       await shiftsAPI.applyForShift(shiftId, {
         specialNotes: specialNotes,
         availabilityConfirmed: availability
