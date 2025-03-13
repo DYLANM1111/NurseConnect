@@ -14,10 +14,8 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { authAPI, shiftsAPI } from '../api/client';
 
-// Mock data for testing as fallback
 type Shift = {
   id: string;
   hospital: string;
@@ -50,57 +48,6 @@ type NurseProfile = {
   };
 };
 
-const mockShifts: { [key: string]: Shift } = {
-  '1': {
-    id: '1',
-    hospital: 'Wake Baptist Hospital',
-    unit: 'ICU',
-    date: '2025-02-14',
-    startTime: '07:00',
-    endTime: '19:00',
-    rate: 75.50,
-    distance: '5.2 miles',
-    specialty: 'ICU',
-    facilityRating: 4.5,
-    shiftLength: 12,
-    urgentFill: true,
-    requirements: ['Valid RN License', 'BLS Certification', '2+ years ICU experience', 'ACLS Certification'],
-    description: 'ICU nurse needed to provide direct patient care, IV management, and work alongside a collaborative team. Must be comfortable with advanced cardiac monitoring and life support systems.',
-    contact: 'Jane Smith, Nurse Manager'
-  },
-  '2': {
-    id: '2',
-    hospital: 'Duke Hospital',
-    unit: 'ER',
-    date: '2025-02-14',
-    startTime: '07:00',
-    endTime: '15:00',
-    rate: 60.00,
-    distance: '7.2 miles',
-    specialty: 'ER',
-    facilityRating: 3.5,
-    shiftLength: 8,
-    requirements: ['Valid RN License', 'BLS Certification', 'ER experience preferred'],
-    description: 'ER nurse needed for fast-paced environment. Responsibilities include triage, assessments, and working with multidisciplinary teams.',
-    contact: 'Michael Johnson, ER Director'
-  },
-};
-
-// Mock nurse profile as fallback
-const mockNurseProfile: NurseProfile = {
-  id: 'nurse123',
-  name: 'Sarah Jones',
-  specialty: 'ICU',
-  licenses: ['RN - NC', 'RN - SC'],
-  certifications: ['BLS', 'ACLS', 'PALS'],
-  experience: 5,
-  preferences: {
-    hourlyRate: { min: 50, max: 90 },
-    shiftTypes: ['day', 'night'],
-    distance: 25,
-  }
-};
-
 export default function ApplyShiftScreen() {
   const params = useLocalSearchParams();
   const shiftId = typeof params.id === 'string' ? params.id : Array.isArray(params.id) ? params.id[0] : '';
@@ -125,7 +72,6 @@ export default function ApplyShiftScreen() {
         console.log('User data:', userData);
         
         if (userData) {
-          // Transform user data into the format needed
           setNurseProfile({
             id: userData.id || 'unknown',
             name: `${userData.first_name} ${userData.last_name}`,
@@ -140,12 +86,10 @@ export default function ApplyShiftScreen() {
             }
           });
         } else {
-          console.log('No user data found, using mock data');
-          setNurseProfile(mockNurseProfile);
+          console.log('No user data found');
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
-        setNurseProfile(mockNurseProfile); // Fallback to mock data
       }
     };
 
@@ -158,21 +102,6 @@ export default function ApplyShiftScreen() {
         setShift(shiftData);
       } catch (error) {
         console.error('Error fetching shift from API:', error);
-        // Fallback to mock data
-        console.log('Using mock shift data');
-        const mockShiftData = mockShifts[shiftId];
-        
-        // If the specific shift isn't found in mock data, use the first available mock shift
-        if (!mockShiftData && Object.keys(mockShifts).length > 0) {
-          console.log('Specific shift not found in mock data, using first available mock shift');
-          const firstMockShiftId = Object.keys(mockShifts)[0];
-          setShift({
-            ...mockShifts[firstMockShiftId],
-            id: shiftId // Keep the original ID
-          });
-        } else {
-          setShift(mockShiftData);
-        }
       } finally {
         setLoading(false);
       }
@@ -211,9 +140,8 @@ export default function ApplyShiftScreen() {
       setStep(3);
     } catch (error) {
       console.error('Error applying for shift:', error);
-      // Fallback to mock submission
       setTimeout(() => {
-        setStep(3); // Move to confirmation step
+        setStep(3); 
       }, 1200);
     } finally {
       setSubmitting(false);

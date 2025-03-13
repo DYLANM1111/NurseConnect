@@ -12,15 +12,40 @@ class Shift {
     `);
   }
 
-  static async getById(id) {
-    return pool.query(`
-      SELECT s.*, f.name as hospital, f.address, f.city, f.state, f.zip_code
-      FROM shifts s
-      JOIN facilities f ON s.facility_id = f.id
-      WHERE s.id = $1
-    `, [id]);
-  }
 
+static async getById(id) {
+  try {
+    const query = `
+      SELECT 
+        s.id,
+        s.unit,
+        s.shift_type,
+        s.start_time,
+        s.end_time,
+        s.hourly_rate,
+        s.status,
+        s.requirements,
+        s.specialty,
+        s.urgent_fill,
+        s.facility_rating,
+        s.description,
+        f.name AS hospital,
+        f.contact_phone AS contact_info
+      FROM 
+        shifts s
+      JOIN 
+        facilities f ON s.facility_id = f.id
+      WHERE 
+        s.id = $1
+    `;
+    
+    const result = await pool.query(query, [id]);
+    return result;
+  } catch (error) {
+    console.error('Error in Shift.getById:', error);
+    throw error;
+  }
+}
 }
 
 export default Shift;

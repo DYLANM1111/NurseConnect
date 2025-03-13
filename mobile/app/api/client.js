@@ -6,7 +6,6 @@ import { apiBaseUrl, initApiConfig } from './config';
 // Initialize API config on import
 initApiConfig();
 
-// Create axios instance with dynamic base URL
 const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
@@ -14,18 +13,40 @@ const apiClient = axios.create({
   timeout: 30000, // 30 seconds timeout
 });
 
-// Update baseURL before each request
 apiClient.interceptors.request.use(async (config) => {
   config.baseURL = apiBaseUrl;
+  
+  if (config.url && !config.url.startsWith('/')) {
+    config.url = '/' + config.url;
+  }
+  
+  const fullUrl = `${apiBaseUrl}${config.url}`;
+  console.log(`Making API request to: ${fullUrl}`);
+  
   return config;
 });
 
-// Authentication API
+apiClient.interceptors.response.use(
+  (response) => {
+    console.log(`API Success: ${response.config.method?.toUpperCase()} ${response.config.url} - Status: ${response.status}`);
+    return response;
+  },
+  (error) => {
+    console.error('API Error:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data
+    });
+    
+    return Promise.reject(error);
+  }
+);
+
 export const authAPI = {
-  // Register new user
   register: async (userData) => {
     try {
-      console.log('Making registration request to:', apiBaseUrl + '/auth/register');
       const response = await apiClient.post('/auth/register', userData);
       
       if (response.data.user) {
@@ -67,7 +88,6 @@ export const authAPI = {
     }
   },
   
-  // Get current user from storage
   getCurrentUser: async () => {
     try {
       const user = await AsyncStorage.getItem('user');
@@ -79,34 +99,58 @@ export const authAPI = {
   }
 };
 
-// Shifts API
 export const shiftsAPI = {
-  // Get all shifts
   getShifts: async () => {
     try {
-      const response = await apiClient.get('/shifts');
+      console.log('Fetching all shifts');
+      const response = await apiClient.get('shifts');
+      console.log(`Successfully fetched ${response.data?.length || 0} shifts`);
       return response.data;
     } catch (error) {
       console.error('Error fetching shifts:', error);
+      
+      // Detailed error logging
+      if (error.response) {
+        console.log('Error status:', error.response.status);
+        console.log('Error data:', error.response.data);
+      } else if (error.request) {
+        console.log('No response received:', error.request);
+      } else {
+        console.log('Error configuring request:', error.message);
+      }
+      
       throw error.response?.data?.error || 'Failed to fetch shifts';
     }
   },
   
-  // Get shift details by ID
   getShiftDetails: async (id) => {
     try {
-      const response = await apiClient.get(`/shifts/${id}`);
+      console.log(`Fetching shift details for ID: ${id}`);
+      const response = await apiClient.get(`shifts/${id}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching shift details:', error);
+      // Detailed error logging
+      if (error.response) {
+        console.log('Error status:', error.response.status);
+        console.log('Error data:', error.response.data);
+      } else if (error.request) {
+        console.log('No response received:', error.request);
+      } else {
+        console.log('Error configuring request:', error.message);
+      }
+      
+      if (error.response?.status === 404) {
+        throw 'Shift not found - it may have been filled or removed';
+      }
+      
       throw error.response?.data?.error || 'Failed to fetch shift details';
     }
   },
   
-  // Apply for a shift
   applyForShift: async (shiftId, applicationData) => {
     try {
-      const response = await apiClient.post(`/shifts/${shiftId}/apply`, applicationData);
+      const response = await apiClient.post(`shifts/${shiftId}/apply`, applicationData);
       return response.data;
     } catch (error) {
       console.error('Error applying for shift:', error);

@@ -13,7 +13,7 @@ console.log('Available controller methods:', Object.keys(shiftController));
 router.get('/shifts', shiftController.getAllShifts);
 
 // Comment out routes with undefined handlers until you implement them
-// router.get('/shifts/:id', shiftController.getShiftById);
+ router.get('/shifts/:id', shiftController.getShiftById);
 // router.post('/shifts/:id/apply', authMiddleware, shiftController.applyForShift);
 
 export { router };
