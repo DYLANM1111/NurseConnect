@@ -6,6 +6,7 @@ import os from 'os';
 
 import authRoutes from './../Shared/Routes/authRoutes.js';
 import nurseRoutes from './../Shared/Routes/nurseRoutes.js'
+import dashboardRoutes from './../Shared/Routes/dashboardRoutes.js'
 import { router as shiftRoutes } from './../Shared/Routes/shiftRoutes.js'
 
 
@@ -45,9 +46,9 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api', nurseRoutes);
 app.use('/api', shiftRoutes);
+app.use('/api', dashboardRoutes);
 
 
-// In your app.js or main server file
 console.log('Registered routes:');
 app._router.stack.forEach(function(r) {
   if (r.route && r.route.path) {

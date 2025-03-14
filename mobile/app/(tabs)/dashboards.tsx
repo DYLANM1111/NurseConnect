@@ -7,38 +7,52 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Dimensions,
-  Image,
-  ActivityIndicator
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { dashboardAPI } from '../api/client';
 
 const { width } = Dimensions.get('window');
 
-// Mock data - we'll replace with actual data when available
-const MOCK_SHIFTS = [
-  {
-    id: '1',
-    hospital: 'Stanford Medical Center',
-    unit: 'ICU',
-    date: '2025-02-14',
-    hours: 12,
-    earnings: 1146.00,
-    status: 'completed'
-  },
-  {
-    id: '2',
-    hospital: 'UCSF Medical Center',
-    unit: 'Emergency',
-    date: '2025-02-12',
-    hours: 8,
-    earnings: 764.00,
-    status: 'completed'
-  },
-];
+interface EarningsSummary {
+  weekly: number;
+  monthly: number;
+  totalHours: number;
+  completedShifts: number;
+}
 
-const DEFAULT_EARNINGS_SUMMARY = {
+interface UpcomingShift {
+  id: string;
+  hospital: string;
+  unit: string;
+  date: string;
+  time: string;
+  hours: number;
+  rate: number;
+}
+
+interface CompletedShift {
+  id: string;
+  hospital: string;
+  unit: string;
+  date: string;
+  hours: number;
+  earnings: number;
+  status: string;
+}
+
+interface User {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  nurse_profile_id?: string;
+}
+
+const DEFAULT_EARNINGS_SUMMARY: EarningsSummary = {
   weekly: 0,
   monthly: 0,
   totalHours: 0,
@@ -48,11 +62,13 @@ const DEFAULT_EARNINGS_SUMMARY = {
 export default function DashboardScreen() {
   const router = useRouter();
   const [timeframe, setTimeframe] = useState('week');
-  const [userData, setUserData] = useState(null);
+  const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [earningsSummary, setEarningsSummary] = useState(DEFAULT_EARNINGS_SUMMARY);
+  const [earningsSummary, setEarningsSummary] = useState<EarningsSummary>(DEFAULT_EARNINGS_SUMMARY);
+  const [upcomingShift, setUpcomingShift] = useState<UpcomingShift | null>(null);
+  const [completedShifts, setCompletedShifts] = useState<CompletedShift[]>([]);
+  const [loadingShifts, setLoadingShifts] = useState(true);
 
-  // Fetch user data on component mount
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -64,16 +80,14 @@ export default function DashboardScreen() {
           setUserData(user);
           console.log('User data loaded:', user);
           
-          // In a real app, you'd fetch the user's shifts and earnings here
-          // For now, we'll use mock data
-          fetchUserEarnings(user.id);
+          await fetchDashboardData(user.id);
         } else {
-          // No user data found, redirect to login
           console.log('No user data found, redirecting to login');
           router.replace('/signin');
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
+        Alert.alert('Error', 'Failed to load your data. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -82,19 +96,27 @@ export default function DashboardScreen() {
     fetchUserData();
   }, []);
 
-  // Mock function to fetch user earnings
-  // In a real app, this would make an API call to your backend
-  const fetchUserEarnings = async (userId) => {
-    // Simulating API call
-    setTimeout(() => {
-      // Mock data - in a real app, this would come from your backend
-      setEarningsSummary({
-        weekly: 1910.00,
-        monthly: 7640.00,
-        totalHours: 20,
-        completedShifts: 2
-      });
-    }, 500);
+  const fetchDashboardData = async (userId: string) => {
+    setLoadingShifts(true);
+    
+    try {
+      const [earningsData, upcomingShiftData, completedShiftsData] = await Promise.all([
+        dashboardAPI.getUserEarnings(userId),
+        dashboardAPI.getUpcomingShift(userId),
+        dashboardAPI.getCompletedShifts(userId)
+      ]);
+
+      setEarningsSummary(earningsData);
+      setUpcomingShift(upcomingShiftData);
+      setCompletedShifts(completedShiftsData);
+      
+      console.log('Dashboard data loaded successfully');
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      Alert.alert('Error', 'Failed to load your dashboard data. Please try again.');
+    } finally {
+      setLoadingShifts(false);
+    }
   };
 
   const handleFindShifts = () => {
@@ -243,19 +265,37 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity 
-          style={styles.upcomingShiftCard}
-          onPress={() => router.push('/shift/123')}
-        >
-          <View style={styles.shiftTimeTag}>
-            <Text style={styles.shiftTimeText}>Tomorrow • 7:00 AM</Text>
+        {loadingShifts ? (
+          <View style={styles.loadingShifts}>
+            <ActivityIndicator size="small" color="#0065FF" />
+            <Text style={styles.loadingShiftsText}>Loading shifts...</Text>
           </View>
-          <Text style={styles.hospitalName}>Stanford Medical Center</Text>
-          <Text style={styles.unitName}>Intensive Care Unit</Text>
-          <View style={styles.shiftDetail}>
-            <Text style={styles.shiftDetailText}>12 Hour Shift • $95.50/hr</Text>
+        ) : upcomingShift ? (
+          <TouchableOpacity 
+            style={styles.upcomingShiftCard}
+            onPress={() => router.push(`/shift/${upcomingShift.id}`)}
+          >
+            <View style={styles.shiftTimeTag}>
+              <Text style={styles.shiftTimeText}>{upcomingShift.date} • {upcomingShift.time}</Text>
+            </View>
+            <Text style={styles.hospitalName}>{upcomingShift.hospital}</Text>
+            <Text style={styles.unitName}>{upcomingShift.unit}</Text>
+            <View style={styles.shiftDetail}>
+              <Text style={styles.shiftDetailText}>{upcomingShift.hours} Hour Shift • ${upcomingShift.rate.toFixed(2)}/hr</Text>
+            </View>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.noShiftsContainer}>
+            <Text style={styles.noShiftsText}>No upcoming shifts found</Text>
+            <TouchableOpacity 
+              style={styles.findShiftsButton}
+              onPress={handleFindShifts}
+            >
+              <Ionicons name="search" size={18} color="#FFFFFF" style={styles.buttonIcon} />
+              <Text style={styles.findShiftsButtonText}>Find Shifts</Text>
+            </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        )}
 
         {/* Past Shifts */}
         <View style={styles.sectionHeader}>
@@ -265,26 +305,37 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {MOCK_SHIFTS.map((shift) => (
-          <TouchableOpacity 
-            key={shift.id}
-            style={styles.pastShiftCard}
-            onPress={() => router.push(`/shift/${shift.id}`)}
-          >
-            <View style={styles.pastShiftHeader}>
-              <Text style={styles.pastShiftDate}>{shift.date}</Text>
-              <Text style={styles.pastShiftEarnings}>${shift.earnings.toLocaleString()}</Text>
-            </View>
-            <Text style={styles.pastShiftHospital}>{shift.hospital}</Text>
-            <Text style={styles.pastShiftUnit}>{shift.unit}</Text>
-            <View style={styles.pastShiftFooter}>
-              <Text style={styles.pastShiftHours}>{shift.hours} Hours</Text>
-              <View style={styles.statusTag}>
-                <Text style={styles.statusText}>Completed</Text>
+        {loadingShifts ? (
+          <View style={styles.loadingShifts}>
+            <ActivityIndicator size="small" color="#0065FF" />
+            <Text style={styles.loadingShiftsText}>Loading past shifts...</Text>
+          </View>
+        ) : completedShifts.length > 0 ? (
+          completedShifts.map((shift) => (
+            <TouchableOpacity 
+              key={shift.id}
+              style={styles.pastShiftCard}
+              onPress={() => router.push(`/shift/${shift.id}`)}
+            >
+              <View style={styles.pastShiftHeader}>
+                <Text style={styles.pastShiftDate}>{shift.date}</Text>
+                <Text style={styles.pastShiftEarnings}>${shift.earnings.toLocaleString()}</Text>
               </View>
-            </View>
-          </TouchableOpacity>
-        ))}
+              <Text style={styles.pastShiftHospital}>{shift.hospital}</Text>
+              <Text style={styles.pastShiftUnit}>{shift.unit}</Text>
+              <View style={styles.pastShiftFooter}>
+                <Text style={styles.pastShiftHours}>{shift.hours} Hours</Text>
+                <View style={styles.statusTag}>
+                  <Text style={styles.statusText}>Completed</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))
+        ) : (
+          <View style={styles.noShiftsContainer}>
+            <Text style={styles.noShiftsText}>No completed shifts found</Text>
+          </View>
+        )}
       </ScrollView>
 
       {/* Floating Find Shifts Button */}
@@ -303,6 +354,50 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F7FA',
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#8F9BB3',
+  },
+  loadingShifts: {
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    marginBottom: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#1A1F33',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  loadingShiftsText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#8F9BB3',
+  },
+  noShiftsContainer: {
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    marginBottom: 16,
+    alignItems: 'center',
+    shadowColor: '#1A1F33',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  noShiftsText: {
+    fontSize: 16,
+    color: '#8F9BB3',
+    marginBottom: 16,
   },
   header: {
     flexDirection: 'row',

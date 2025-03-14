@@ -148,29 +148,88 @@ export const shiftsAPI = {
     }
   },
   
-// Apply for a shift
-applyForShift: async (shiftId, applicationData) => {
-  try {
-    const user = await authAPI.getCurrentUser();
-    
-    if (!user || !user.nurse_profile_id) {
-      throw 'User profile not found or incomplete. Please update your profile.';
+  applyForShift: async (shiftId, applicationData) => {
+    try {
+      const user = await authAPI.getCurrentUser();
+      
+      if (!user || !user.nurse_profile_id) {
+        throw 'User profile not found or incomplete. Please update your profile.';
+      }
+      
+      const completeApplicationData = {
+        ...applicationData,
+        nurse_profile_id: user.nurse_profile_id
+      };
+      
+      console.log('Submitting application with data:', completeApplicationData);
+      
+      const response = await apiClient.post(`shifts/${shiftId}/apply`, completeApplicationData);
+      return response.data;
+    } catch (error) {
+      console.error('Error applying for shift:', error);
+      throw error.response?.data?.error || 'Failed to apply for shift';
     }
-    
-    const completeApplicationData = {
-      ...applicationData,
-      nurse_profile_id: user.nurse_profile_id
-    };
-    
-    console.log('Submitting application with data:', completeApplicationData);
-    
-    const response = await apiClient.post(`shifts/${shiftId}/apply`, completeApplicationData);
-    return response.data;
-  } catch (error) {
-    console.error('Error applying for shift:', error);
-    throw error.response?.data?.error || 'Failed to apply for shift';
   }
-}
+};
+
+export const dashboardAPI = {
+  getUserEarnings: async (userId) => {
+    try {
+      const response = await apiClient.get(`users/${userId}/earnings`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching earnings:', error);
+      
+      if (error.response) {
+        console.log('Error status:', error.response.status);
+        console.log('Error data:', error.response.data);
+      }
+      
+      throw error.response?.data?.error || 'Failed to fetch earnings data';
+    }
+  },
+  
+  getUpcomingShift: async (userId) => {
+    try {
+      const response = await apiClient.get(`users/${userId}/shifts/upcoming`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching upcoming shift:', error);
+      
+      if (error.response) {
+        console.log('Error status:', error.response.status);
+        console.log('Error data:', error.response.data);
+      }
+      
+      // Return null if no shifts found (404)
+      if (error.response?.status === 404) {
+        return null;
+      }
+      
+      throw error.response?.data?.error || 'Failed to fetch upcoming shift data';
+    }
+  },
+  
+  getCompletedShifts: async (userId) => {
+    try {
+      const response = await apiClient.get(`users/${userId}/shifts/completed`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching completed shifts:', error);
+      
+      if (error.response) {
+        console.log('Error status:', error.response.status);
+        console.log('Error data:', error.response.data);
+      }
+      
+      // Return empty array if no shifts found (404)
+      if (error.response?.status === 404) {
+        return [];
+      }
+      
+      throw error.response?.data?.error || 'Failed to fetch completed shifts data';
+    }
+  }
 };
 
 export default apiClient;
