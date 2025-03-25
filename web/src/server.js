@@ -37,9 +37,9 @@ const io = socketIo(server, {
 //middleware
 app.use(helmet());
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:3000', credentials: true }));
-app.use(moran('dev'));
+app.use(morgan('dev'));
 app.use(express.json());
-app.use(express.urlencoded({ extended: flase }));
+app.use(express.urlencoded({ extended: false }));
 
 
 //initialize passport

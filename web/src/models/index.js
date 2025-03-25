@@ -19,13 +19,13 @@ db.sequelize = sequelize;
 
 // Import models
 db.User = require('./user')(sequelize, Sequelize);
-db.NurseProfile = require('./nurseProfile')(sequelize, Sequelize);
-db.License = require('./license')(sequelize, Sequelize);
-db.Certification = require('./certification')(sequelize, Sequelize);
+db.NurseProfile = require('./nurse')(sequelize, Sequelize);
+db.License = require('./license')(sequelize, Sequelize); 
+//db.Certification = require('./certification')(sequelize, Sequelize);
 db.Facility = require('./facility')(sequelize, Sequelize);
 db.Shift = require('./shift')(sequelize, Sequelize);
 db.ShiftApplication = require('./application')(sequelize, Sequelize);
-db.TimeRecord = require('./timeRecord')(sequelize, Sequelize);
+//db.TimeRecord = require('./timeRecord')(sequelize, Sequelize);
 db.Payment = require('./payment')(sequelize, Sequelize);
 
 // Set up associations
