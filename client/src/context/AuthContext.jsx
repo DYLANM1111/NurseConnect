@@ -113,7 +113,7 @@ export const AuthProvider = ({ children }) => {
   const registerFacility = async (facilityData) => {
     try {
       setError(null);
-      const response = await axios.post('/api/facility-auth/register', facilityData);
+      const response = await axios.post('http://localhost:8080/api/facility-auth/register', facilityData);
       
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('facility', JSON.stringify(response.data.facility));

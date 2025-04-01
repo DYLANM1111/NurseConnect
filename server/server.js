@@ -5,6 +5,7 @@ const cors = require('cors');
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const facilityAuthRoutes = require('./routes/facilityAuth');
 
 // Initialize Express app
 const app = express();
@@ -15,6 +16,9 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json()); // This needs to be before routes to parse JSON bodies
+
+// Use routes
+app.use('/api/facility-auth', facilityAuthRoutes);
 
 // Database connection
 const pool = new Pool({
