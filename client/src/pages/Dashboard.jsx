@@ -19,8 +19,11 @@ const Dashboard = () => {
       try {
         setLoading(true);
         
-        // Fetch shifts with status "open"
-        const shiftsResponse = await getAllShifts({ status: 'open' });
+        // Fetch shifts with status "open" for the current facility only
+        const shiftsResponse = await getAllShifts({ 
+          status: 'open',
+          facility_id: currentFacility.id 
+        });
         setShifts(shiftsResponse);
         
         // Fetch all facilities
@@ -36,7 +39,7 @@ const Dashboard = () => {
     };
     
     fetchDashboardData();
-  }, []);
+  }, [currentFacility]);
   
   if (loading) {
     return (
@@ -137,15 +140,12 @@ const Dashboard = () => {
           <h2 className="text-lg font-medium text-gray-900 mb-4">Recent Open Shifts</h2>
           
           {shifts.length === 0 ? (
-            <p className="text-gray-500">No open shifts available.</p>
+            <p className="text-gray-500">No open shifts available for your facility.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Facility
-                    </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Unit
                     </th>
@@ -166,11 +166,6 @@ const Dashboard = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {shifts.slice(0, 5).map((shift) => (
                     <tr key={shift.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {shift.facility_name}
-                        </div>
-                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">{shift.unit}</div>
                       </td>

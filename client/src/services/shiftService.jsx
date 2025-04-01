@@ -21,13 +21,27 @@ export const getShiftById = async (id) => {
 };
 
 export const createShift = async (shiftData) => {
-  const response = await api.post('/api/shifts', shiftData);
-  return response.data;
+  try {
+    console.log('Creating shift with data:', shiftData);
+    const response = await api.post('/api/shifts', shiftData);
+    console.log('Server response:', response);
+    return response.data;
+  } catch (error) {
+    console.error('Error in createShift service:', error);
+    throw error;
+  }
 };
 
 export const updateShift = async (id, shiftData) => {
-  const response = await api.put(`/api/shifts/${id}`, shiftData);
-  return response.data;
+  try {
+    console.log('Updating shift ID', id, 'with data:', shiftData);
+    const response = await api.put(`/api/shifts/${id}`, shiftData);
+    console.log('Server response:', response);
+    return response.data;
+  } catch (error) {
+    console.error('Error in updateShift service:', error);
+    throw error;
+  }
 };
 
 export const deleteShift = async (id) => {

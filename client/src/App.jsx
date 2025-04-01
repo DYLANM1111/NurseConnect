@@ -42,9 +42,11 @@ function App() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="facility-profile" element={<FacilityProfile />} />
         <Route path="shifts" element={<ShiftList />} />
-        <Route path="shifts/:id" element={<ShiftDetail />} />
+        {/* More specific routes first */}
         <Route path="shifts/new" element={<ShiftForm />} />
         <Route path="shifts/edit/:id" element={<ShiftForm isEdit />} />
+        {/* General parameter route last */}
+        <Route path="shifts/:id" element={<ShiftDetail />} />
         <Route path="post-shift" element={<ShiftForm />} />
       </Route>
       

@@ -1,4 +1,3 @@
-// client/src/pages/ShiftDetail.js
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { getShiftById, deleteShift } from '../services/shiftService';
@@ -10,7 +9,7 @@ import { toast } from 'react-toastify';
 const ShiftDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, currentFacility } = useAuth();
   
   const [shift, setShift] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -46,6 +45,16 @@ const ShiftDetail = () => {
         toast.error('Failed to delete shift');
       }
     }
+  };
+
+  const handleEdit = () => {
+    navigate(`/shifts/edit/${id}`);
+  };
+  
+  // Check if current facility matches the shift's facility
+  const canEdit = () => {
+    if (!shift || !currentFacility) return false;
+    return shift.facility_id === currentFacility.id;
   };
   
   if (loading) {
@@ -90,15 +99,15 @@ const ShiftDetail = () => {
             Back to Shifts
           </Link>
           
-          {isAdmin() && (
+          {canEdit() && (
             <>
-              <Link
-                to={`/shifts/edit/${shift.id}`}
+              <button
+                onClick={handleEdit}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700"
               >
                 <FaEdit className="mr-2" />
                 Edit
-              </Link>
+              </button>
               
               <button
                 onClick={handleDelete}

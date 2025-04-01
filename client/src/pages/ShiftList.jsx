@@ -1,59 +1,116 @@
-// client/src/pages/ShiftList.js
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getAllShifts, deleteShift } from '../services/shiftService';
-import { getAllFacilities } from '../services/facilityService';
 import { useAuth } from '../context/AuthContext';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { FaPlus, FaEdit, FaTrash, FaFilter } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 
 const ShiftList = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, currentFacility } = useAuth();
   
   const [shifts, setShifts] = useState([]);
-  const [facilities, setFacilities] = useState([]);
+  const [filteredShifts, setFilteredShifts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [filterApplied, setFilterApplied] = useState(false);
+  const [availableDates, setAvailableDates] = useState([]);
   
   // Filter states
-  const [selectedFacility, setSelectedFacility] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [filterDate, setFilterDate] = useState('');
   
   useEffect(() => {
-    fetchFacilities();
     fetchShifts();
   }, []);
-  
-  const fetchFacilities = async () => {
-    try {
-      const response = await getAllFacilities();
-      setFacilities(response);
-    } catch (error) {
-      console.error('Error fetching facilities:', error);
-      toast.error('Failed to fetch facilities');
-    }
-  };
   
   const fetchShifts = async () => {
     try {
       setLoading(true);
       
-      // Prepare filter parameters
+      // Only filter by facility on the server side
       const filters = {};
-      if (selectedFacility) filters.facility_id = selectedFacility;
-      if (selectedStatus) filters.status = selectedStatus;
-      if (filterDate) filters.startDate = new Date(filterDate);
       
+      // Always filter by current facility ID
+      if (currentFacility && currentFacility.id) {
+        filters.facility_id = currentFacility.id;
+      }
+      
+      console.log('Fetching all shifts for facility:', currentFacility?.id);
+      
+      // Make API request to get all shifts for this facility
       const response = await getAllShifts(filters);
+      
+      console.log('Received shifts from server:', response.length);
+      
+      // Store all shifts
       setShifts(response);
+      
+      // Initially show all shifts for the facility
+      setFilteredShifts(response);
+      
+      // Extract available dates for filtering
+      const dates = response.map(shift => {
+        // Extract just the date part in YYYY-MM-DD format
+        return new Date(shift.start_time).toISOString().split('T')[0];
+      });
+      
+      // Get unique dates and sort them
+      const uniqueDates = [...new Set(dates)].sort();
+      setAvailableDates(uniqueDates);
+      
+      console.log('Available dates for filtering:', uniqueDates);
+      
       setLoading(false);
     } catch (error) {
       console.error('Error fetching shifts:', error);
-      setError('Failed to fetch shifts');
+      setError('Failed to fetch shifts: ' + (error.message || 'Unknown error'));
       setLoading(false);
     }
+  };
+  
+  // Apply filters on the client side - only called when Apply Filters button is clicked
+  const applyFilters = () => {
+    console.log('Applying client-side filters - Status:', selectedStatus, 'Date:', filterDate);
+    
+    // Start with all shifts
+    let result = [...shifts];
+    let filterWasApplied = false;
+    
+    // Apply status filter if selected
+    if (selectedStatus && selectedStatus !== '') {
+      console.log('Filtering by status:', selectedStatus);
+      result = result.filter(shift => shift.status === selectedStatus);
+      filterWasApplied = true;
+      
+      console.log('After status filter, shifts remaining:', result.length);
+    }
+    
+    // Apply date filter if selected
+    if (filterDate && filterDate !== '') {
+      console.log('Filtering by date:', filterDate);
+      
+      // The date filter from the input is already in YYYY-MM-DD format
+      result = result.filter(shift => {
+        // Extract just the date part from shift.start_time
+        const shiftDate = new Date(shift.start_time).toISOString().split('T')[0];
+        
+        // Debug logs for each shift
+        console.log(`Shift ID ${shift.id} - comparing dates:`, {
+          shiftDate: shiftDate,
+          filterDate: filterDate,
+          matches: shiftDate === filterDate
+        });
+        
+        return shiftDate === filterDate;
+      });
+      
+      filterWasApplied = true;
+      console.log('After date filter, shifts remaining:', result.length);
+    }
+    
+    setFilterApplied(filterWasApplied);
+    setFilteredShifts(result);
   };
   
   const handleDelete = async (id) => {
@@ -70,18 +127,76 @@ const ShiftList = () => {
   };
   
   const handleFilterChange = () => {
-    fetchShifts();
+    console.log('Filter button clicked. Status:', selectedStatus, 'Date:', filterDate);
+    applyFilters();
   };
   
   const clearFilters = () => {
-    setSelectedFacility('');
+    console.log('Clearing filters');
     setSelectedStatus('');
     setFilterDate('');
+    setFilterApplied(false);
+    // When clearing filters, show all shifts for the facility
+    setFilteredShifts(shifts);
+  };
+  
+  // Debug information display
+  const renderDebugInfo = () => {
+    if (!isAdmin()) return null;
     
-    // Reset and fetch all shifts
-    setTimeout(() => {
-      fetchShifts();
-    }, 0);
+    return (
+      <div className="bg-gray-100 p-4 my-4 rounded-lg text-xs">
+        <h4 className="font-bold mb-2">Debug Information</h4>
+        <p>Current facility ID: {currentFacility?.id || 'Unknown'}</p>
+        <p>Selected status: "{selectedStatus}"</p>
+        <p>Selected date: "{filterDate}"</p>
+        <p>Total shifts from server: {shifts.length}</p>
+        <p>Filtered shifts displayed: {filteredShifts.length}</p>
+        <p>Filter applied: {filterApplied ? 'Yes' : 'No'}</p>
+        
+        {shifts.length > 0 && (
+          <div>
+            <p className="font-bold mt-2">First shift details:</p>
+            <p>- ID: {shifts[0].id}</p>
+            <p>- Status: "{shifts[0].status}"</p>
+            <p>- Raw date value: {shifts[0].start_time}</p>
+            <p>- Formatted date: {new Date(shifts[0].start_time).toISOString().split('T')[0]}</p>
+            
+            <p className="font-bold mt-2">Status types present:</p>
+            <ul className="list-disc pl-5">
+              {Array.from(new Set(shifts.map(shift => shift.status))).map(status => (
+                <li key={status}>{status}</li>
+              ))}
+            </ul>
+            
+            <p className="font-bold mt-2">Available dates for filtering:</p>
+            <ul className="list-disc pl-5">
+              {availableDates.map(date => (
+                <li key={date}>{date}</li>
+              ))}
+            </ul>
+            
+            <div className="mt-4 p-2 bg-yellow-100 text-yellow-800 rounded">
+              <p className="font-bold">Quick Copy Available Dates:</p>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {availableDates.map(date => (
+                  <button
+                    key={date}
+                    onClick={() => {
+                      setFilterDate(date);
+                      console.log('Set date to:', date);
+                    }}
+                    className="px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 rounded"
+                  >
+                    {date}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
   
   if (loading) {
@@ -99,6 +214,9 @@ const ShiftList = () => {
       </div>
     );
   }
+  
+  // Use filtered shifts for display
+  const displayShifts = filteredShifts;
   
   return (
     <div className="space-y-6">
@@ -123,26 +241,7 @@ const ShiftList = () => {
           <h3 className="text-lg font-medium">Filters</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label htmlFor="facility-filter" className="block text-sm font-medium text-gray-700 mb-1">
-              Facility
-            </label>
-            <select
-              id="facility-filter"
-              className="form-input"
-              value={selectedFacility}
-              onChange={(e) => setSelectedFacility(e.target.value)}
-            >
-              <option value="">All Facilities</option>
-              {facilities.map((facility) => (
-                <option key={facility.id} value={facility.id}>
-                  {facility.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">
               Status
@@ -151,7 +250,11 @@ const ShiftList = () => {
               id="status-filter"
               className="form-input"
               value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                console.log('Selected status:', value);
+                setSelectedStatus(value);
+              }}
             >
               <option value="">All Statuses</option>
               <option value="open">Open</option>
@@ -170,8 +273,18 @@ const ShiftList = () => {
               type="date"
               className="form-input"
               value={filterDate}
-              onChange={(e) => setFilterDate(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                console.log('Selected date:', value);
+                setFilterDate(value);
+              }}
             />
+            {availableDates.length > 0 && isAdmin() && (
+              <div className="text-xs text-gray-500 mt-1">
+                Available dates: {availableDates.slice(0, 3).join(', ')}
+                {availableDates.length > 3 ? ' ...' : ''}
+              </div>
+            )}
           </div>
           
           <div className="flex items-end space-x-2">
@@ -192,9 +305,16 @@ const ShiftList = () => {
         </div>
       </div>
       
-      {shifts.length === 0 ? (
+      {/* Debug information for troubleshooting */}
+      {renderDebugInfo()}
+      
+      {displayShifts.length === 0 ? (
         <div className="bg-white shadow rounded-lg p-6">
-          <p className="text-gray-500">No shifts found.</p>
+          <p className="text-gray-500">
+            {filterApplied 
+              ? 'No shifts found for your facility with the selected filters.'
+              : 'No shifts found for your facility.'}
+          </p>
         </div>
       ) : (
         <div className="bg-white shadow rounded-lg overflow-hidden">
@@ -202,9 +322,6 @@ const ShiftList = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Facility
-                  </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Unit
                   </th>
@@ -226,7 +343,7 @@ const ShiftList = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {shifts.map((shift) => (
+                {displayShifts.map((shift) => (
                   <tr key={shift.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{shift.unit}</div>

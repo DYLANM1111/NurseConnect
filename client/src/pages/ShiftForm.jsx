@@ -1,4 +1,3 @@
-// client/src/pages/ShiftForm.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { Formik, Form, Field, ErrorMessage, FieldArray } from 'formik';
@@ -8,6 +7,7 @@ import { toast } from 'react-toastify';
 import { createShift, updateShift, getShiftById } from '../services/shiftService';
 import { getAllFacilities } from '../services/facilityService';
 import { format } from 'date-fns';
+import { useAuth } from '../context/AuthContext';
 
 const shiftSchema = Yup.object().shape({
   facility_id: Yup.string().required('Facility is required'),
@@ -26,13 +26,14 @@ const shiftSchema = Yup.object().shape({
     .min(0, 'Hourly rate must be at least 0'),
   status: Yup.string()
     .required('Status is required')
-    .oneOf(['open', 'assigned', 'completed', 'cancelled'], 'Invalid status'),
+    .oneOf(['open'], 'New shifts must have "open" status'),
   requirements: Yup.array().of(Yup.string())
 });
 
 const ShiftForm = ({ isEdit }) => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { currentFacility } = useAuth();
   
   const [shift, setShift] = useState(null);
   const [facilities, setFacilities] = useState([]);
@@ -68,19 +69,43 @@ const ShiftForm = ({ isEdit }) => {
     fetchData();
   }, [id, isEdit]);
   
-  const initialValues = {
-    facility_id: shift?.facility_id || '',
-    unit: shift?.unit || '',
-    shift_type: shift?.shift_type || '',
-    start_time: shift?.start_time || '',
-    end_time: shift?.end_time || '',
-    hourly_rate: shift?.hourly_rate || '',
-    status: shift?.status || 'open',
-    requirements: shift?.requirements || []
+  // For a new shift (not editing), calculate the initialValues
+  const getInitialValues = () => {
+    if (isEdit && shift) {
+      // If editing, use the shift data
+      return {
+        facility_id: shift.facility_id || '',
+        unit: shift.unit || '',
+        shift_type: shift.shift_type || '',
+        start_time: shift.start_time || '',
+        end_time: shift.end_time || '',
+        hourly_rate: shift.hourly_rate || '',
+        status: shift.status || 'open',
+        requirements: shift.requirements || []
+      };
+    } else {
+      // For a new shift, set default values
+      // If currentFacility is available, pre-select it
+      return {
+        facility_id: currentFacility?.id || '',
+        unit: '',
+        shift_type: '',
+        start_time: '',
+        end_time: '',
+        hourly_rate: '',
+        status: 'open', // Always set to 'open' for new shifts
+        requirements: []
+      };
+    }
   };
   
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
+      // Always ensure status is 'open' for new shifts
+      if (!isEdit) {
+        values.status = 'open';
+      }
+      
       if (isEdit) {
         await updateShift(id, values);
         toast.success('Shift updated successfully');
@@ -118,7 +143,7 @@ const ShiftForm = ({ isEdit }) => {
     <div className="max-w-3xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-gray-900">
-          {isEdit ? 'Edit Shift' : 'Add Shift'}
+          {isEdit ? 'Edit Shift' : 'Post New Shift'}
         </h1>
         
         <Link
@@ -133,7 +158,7 @@ const ShiftForm = ({ isEdit }) => {
       <div className="bg-white shadow rounded-lg overflow-hidden">
         <div className="p-6">
           <Formik
-            initialValues={initialValues}
+            initialValues={getInitialValues()}
             validationSchema={shiftSchema}
             onSubmit={handleSubmit}
             enableReinitialize
@@ -143,19 +168,30 @@ const ShiftForm = ({ isEdit }) => {
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <div>
                     <label htmlFor="facility_id" className="form-label">Facility</label>
-                    <Field
-                      as="select"
-                      id="facility_id"
-                      name="facility_id"
-                      className={`form-input ${touched.facility_id && errors.facility_id ? 'border-red-500' : ''}`}
-                    >
-                      <option value="">Select Facility</option>
-                      {facilities.map((facility) => (
-                        <option key={facility.id} value={facility.id}>
-                          {facility.name}
-                        </option>
-                      ))}
-                    </Field>
+                    {currentFacility ? (
+                      <div className="form-input bg-gray-100">
+                        {currentFacility.name}
+                        <Field 
+                          type="hidden" 
+                          name="facility_id" 
+                          value={currentFacility.id} 
+                        />
+                      </div>
+                    ) : (
+                      <Field
+                        as="select"
+                        id="facility_id"
+                        name="facility_id"
+                        className={`form-input ${touched.facility_id && errors.facility_id ? 'border-red-500' : ''}`}
+                      >
+                        <option value="">Select Facility</option>
+                        {facilities.map((facility) => (
+                          <option key={facility.id} value={facility.id}>
+                            {facility.name}
+                          </option>
+                        ))}
+                      </Field>
+                    )}
                     <ErrorMessage name="facility_id" component="div" className="form-error" />
                   </div>
                   
@@ -188,21 +224,27 @@ const ShiftForm = ({ isEdit }) => {
                     <ErrorMessage name="shift_type" component="div" className="form-error" />
                   </div>
                   
-                  <div>
-                    <label htmlFor="status" className="form-label">Status</label>
-                    <Field
-                      as="select"
-                      id="status"
-                      name="status"
-                      className={`form-input ${touched.status && errors.status ? 'border-red-500' : ''}`}
-                    >
-                      <option value="open">Open</option>
-                      <option value="assigned">Assigned</option>
-                      <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
-                    </Field>
-                    <ErrorMessage name="status" component="div" className="form-error" />
-                  </div>
+                  {/* Status field - hidden for new shifts, only shown when editing */}
+                  {isEdit ? (
+                    <div>
+                      <label htmlFor="status" className="form-label">Status</label>
+                      <Field
+                        as="select"
+                        id="status"
+                        name="status"
+                        className={`form-input ${touched.status && errors.status ? 'border-red-500' : ''}`}
+                      >
+                        <option value="open">Open</option>
+                        <option value="assigned">Assigned</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </Field>
+                      <ErrorMessage name="status" component="div" className="form-error" />
+                    </div>
+                  ) : (
+                    // Hidden field for new shifts - always 'open'
+                    <Field type="hidden" name="status" value="open" />
+                  )}
                   
                   <div>
                     <label htmlFor="start_time" className="form-label">Start Time</label>
@@ -282,7 +324,7 @@ const ShiftForm = ({ isEdit }) => {
                     className="btn btn-primary inline-flex items-center"
                   >
                     <FaSave className="mr-2" />
-                    {isSubmitting ? 'Saving...' : 'Save Shift'}
+                    {isSubmitting ? 'Saving...' : isEdit ? 'Update Shift' : 'Post Shift'}
                   </button>
                 </div>
               </Form>

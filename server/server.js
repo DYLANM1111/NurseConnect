@@ -271,11 +271,96 @@ app.get('/api/facilities/:id', async (req, res) => {
   }
 });
 
-// Get shifts endpoint
+// Create shift endpoint
+app.post('/api/shifts', async (req, res) => {
+  try {
+    const { 
+      facility_id, 
+      unit, 
+      shift_type, 
+      start_time, 
+      end_time, 
+      hourly_rate, 
+      status, 
+      requirements 
+    } = req.body;
+
+    console.log('Received shift creation request:', req.body);
+
+    // Validate required fields
+    if (!facility_id || !unit || !shift_type || !start_time || !end_time || !hourly_rate) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Force status to be 'open' for new shifts
+    const shiftStatus = 'open';
+
+    // Insert new shift into database
+    const insertQuery = `
+      INSERT INTO shifts 
+      (facility_id, unit, shift_type, start_time, end_time, hourly_rate, status, requirements)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *
+    `;
+    
+    const values = [
+      facility_id, 
+      unit, 
+      shift_type, 
+      start_time, 
+      end_time, 
+      hourly_rate, 
+      shiftStatus, // Always use 'open'
+      requirements || []
+    ];
+
+    console.log('Executing SQL query with values:', values);
+    const result = await pool.query(insertQuery, values);
+    
+    console.log('Shift created successfully:', result.rows[0]);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error creating shift:', error);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+// Delete shift endpoint
+app.delete('/api/shifts/:id', async (req, res) => {
+  try {
+    const shiftId = req.params.id;
+    console.log(`Attempting to delete shift with ID: ${shiftId}`);
+    
+    // First check if the shift exists
+    const checkQuery = 'SELECT * FROM shifts WHERE id = $1';
+    const checkResult = await pool.query(checkQuery, [shiftId]);
+    
+    if (checkResult.rows.length === 0) {
+      console.log(`Shift with ID ${shiftId} not found`);
+      return res.status(404).json({ error: 'Shift not found' });
+    }
+    
+    // Delete the shift
+    const deleteQuery = 'DELETE FROM shifts WHERE id = $1 RETURNING id';
+    const result = await pool.query(deleteQuery, [shiftId]);
+    
+    console.log(`Successfully deleted shift with ID: ${shiftId}`);
+    res.status(200).json({ success: true, message: 'Shift deleted successfully' });
+  } catch (error) {
+    console.error(`Error deleting shift with ID ${req.params.id}:`, error);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+
+// Updated GET /api/shifts endpoint
 app.get('/api/shifts', async (req, res) => {
   try {
-    // Query to get shifts with facility details
-    const query = `
+    // Extract filter parameters from query string
+    const { facility_id, status, startDate, endDate } = req.query;
+    
+    // Start building the query
+    let query = `
       SELECT 
         s.id, 
         s.facility_id, 
@@ -289,10 +374,41 @@ app.get('/api/shifts', async (req, res) => {
         s.requirements
       FROM shifts s
       JOIN facilities f ON s.facility_id = f.id
-      ORDER BY s.start_time
+      WHERE 1=1
     `;
     
-    const result = await pool.query(query);
+    // Array to hold query parameters
+    const queryParams = [];
+    let paramCounter = 1;
+    
+    // Add facility_id filter if provided
+    if (facility_id) {
+      query += ` AND s.facility_id = $${paramCounter++}`;
+      queryParams.push(facility_id);
+    }
+    
+    // Add status filter if provided
+    if (status) {
+      query += ` AND s.status = $${paramCounter++}`;
+      queryParams.push(status);
+    }
+    
+    // Add date filters if provided
+    if (startDate) {
+      query += ` AND s.start_time >= $${paramCounter++}`;
+      queryParams.push(new Date(startDate));
+    }
+    
+    if (endDate) {
+      query += ` AND s.end_time <= $${paramCounter++}`;
+      queryParams.push(new Date(endDate));
+    }
+    
+    // Add order by clause
+    query += ` ORDER BY s.start_time`;
+    
+    // Execute the query with parameters
+    const result = await pool.query(query, queryParams);
     
     res.json(result.rows);
   } catch (error) {
@@ -301,9 +417,11 @@ app.get('/api/shifts', async (req, res) => {
   }
 });
 
-// Get shift by ID
+// Get shift by ID endpoint
 app.get('/api/shifts/:id', async (req, res) => {
   try {
+    const shiftId = req.params.id;
+    
     const query = `
       SELECT 
         s.id, 
@@ -321,7 +439,7 @@ app.get('/api/shifts/:id', async (req, res) => {
       WHERE s.id = $1
     `;
     
-    const result = await pool.query(query, [req.params.id]);
+    const result = await pool.query(query, [shiftId]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Shift not found' });
@@ -329,52 +447,131 @@ app.get('/api/shifts/:id', async (req, res) => {
     
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Error getting shift:', error);
+    console.error('Error getting shift by ID:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// Create shift endpoint
-app.post('/api/shifts', async (req, res) => {
-  try {
-    const { 
-      facility_id, 
-      unit, 
-      shift_type, 
-      start_time, 
-      end_time, 
-      hourly_rate, 
-      status, 
-      requirements 
-    } = req.body;
 
-    // Insert new shift into database
-    const insertQuery = `
-      INSERT INTO shifts 
-      (facility_id, unit, shift_type, start_time, end_time, hourly_rate, status, requirements)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING *
+// Enhanced GET /api/shifts endpoint with improved date handling
+app.get('/api/shifts', async (req, res) => {
+  try {
+    // Extract filter parameters from query string
+    const { facility_id, status, startDate, endDate } = req.query;
+    
+    console.log('-------- GET /api/shifts Request --------');
+    console.log('Query parameters:', req.query);
+    console.log('Status filter:', status, typeof status);
+    console.log('Date filter (startDate):', startDate, typeof startDate);
+    
+    // First, let's check what status values exist in the database
+    const statusCheckQuery = 'SELECT DISTINCT status FROM shifts';
+    const statusResult = await pool.query(statusCheckQuery);
+    console.log('Available status values in the database:', statusResult.rows.map(row => row.status));
+    
+    // Start building the query
+    let query = `
+      SELECT 
+        s.id, 
+        s.facility_id, 
+        f.name AS facility_name,
+        s.unit, 
+        s.shift_type, 
+        s.start_time, 
+        s.end_time, 
+        s.hourly_rate, 
+        s.status, 
+        s.requirements
+      FROM shifts s
+      JOIN facilities f ON s.facility_id = f.id
+      WHERE 1=1
     `;
     
-    const values = [
-      facility_id, 
-      unit, 
-      shift_type, 
-      start_time, 
-      end_time, 
-      hourly_rate, 
-      status, 
-      requirements
-    ];
-
-    const result = await pool.query(insertQuery, values);
+    // Array to hold query parameters
+    const queryParams = [];
+    let paramCounter = 1;
     
-    res.status(201).json(result.rows[0]);
+    // Add facility_id filter if provided
+    if (facility_id) {
+      query += ` AND s.facility_id = $${paramCounter++}`;
+      queryParams.push(facility_id);
+      console.log('Added facility_id filter:', facility_id);
+    }
+    
+    // Add status filter if provided - using exact matching
+    if (status && status.trim() !== '') {
+      query += ` AND s.status = $${paramCounter++}`;
+      queryParams.push(status.trim());
+      console.log('Added status filter:', status.trim());
+    }
+    
+    // Add date filter if provided - using date comparison with CAST for clarity
+    if (startDate && startDate.trim() !== '') {
+      // Extract just the date part and format properly for date comparison
+      query += ` AND DATE(s.start_time) = $${paramCounter++}::date`;
+      queryParams.push(startDate.trim());
+      console.log('Added date filter:', startDate.trim());
+      
+      // Debug logging of actual dates in the database
+      const datesQuery = `
+        SELECT DISTINCT DATE(start_time) as date 
+        FROM shifts 
+        ORDER BY date
+      `;
+      const datesResult = await pool.query(datesQuery);
+      console.log('Available dates in the database:', 
+        datesResult.rows.map(row => row.date.toISOString().split('T')[0])
+      );
+    }
+    
+    // Add end date filter if provided
+    if (endDate && endDate.trim() !== '') {
+      query += ` AND DATE(s.end_time) <= $${paramCounter++}::date`;
+      queryParams.push(endDate.trim());
+      console.log('Added end date filter:', endDate.trim());
+    }
+    
+    // Add order by clause
+    query += ` ORDER BY s.start_time`;
+    
+    console.log('Final SQL query:', query);
+    console.log('Query parameters:', queryParams);
+    
+    // Execute the query with parameters
+    const result = await pool.query(query, queryParams);
+    console.log('Found', result.rows.length, 'shifts');
+    if (result.rows.length > 0) {
+      console.log('Sample shift data:', {
+        id: result.rows[0].id,
+        facility_id: result.rows[0].facility_id, 
+        status: result.rows[0].status,
+        start_time: result.rows[0].start_time,
+        date_part: new Date(result.rows[0].start_time).toISOString().split('T')[0]
+      });
+    }
+    
+    // Try direct queries for debugging
+    if (status && status.trim() !== '') {
+      const directQuery = 'SELECT COUNT(*) FROM shifts WHERE status = $1';
+      const directResult = await pool.query(directQuery, [status.trim()]);
+      console.log(`Direct query for status '${status.trim()}' found:`, directResult.rows[0].count, 'shifts');
+    }
+    
+    if (startDate && startDate.trim() !== '') {
+      const directDateQuery = 'SELECT COUNT(*) FROM shifts WHERE DATE(start_time) = $1::date';
+      const directDateResult = await pool.query(directDateQuery, [startDate.trim()]);
+      console.log(`Direct query for date '${startDate.trim()}' found:`, directDateResult.rows[0].count, 'shifts');
+    }
+    
+    console.log('-------- END GET /api/shifts --------');
+    
+    res.json(result.rows);
   } catch (error) {
-    console.error('Error creating shift:', error);
+    console.error('Error getting shifts:', error);
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
+
 
 const PORT = process.env.PORT || 8080;
 
