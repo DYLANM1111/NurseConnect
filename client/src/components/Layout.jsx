@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FaBars, FaTimes, FaHospital, FaCalendarAlt, FaSignOutAlt, FaUser, FaClipboardList } from 'react-icons/fa';
+import ThemeToggle from '../components/ThemeToggle';
 
 const Layout = () => {
   const { currentFacility, logout } = useAuth();
@@ -86,15 +87,23 @@ const Layout = () => {
       
       {/* Main content */}
       <div className="flex flex-col flex-1 overflow-hidden">
-        <header className="flex items-center justify-between px-6 py-4 bg-white shadow md:hidden">
-          <button
-            onClick={toggleSidebar}
-            className="text-gray-500 focus:outline-none"
-          >
-            <FaBars size={24} />
-          </button>
-          <div className="text-xl font-semibold">NurseConnect</div>
-          <div className="text-gray-500">{currentFacility?.name}</div>
+        <header className="flex items-center justify-between px-6 py-4 bg-white shadow">
+          <div className="flex items-center">
+            <button
+              onClick={toggleSidebar}
+              className="text-gray-500 focus:outline-none md:hidden"
+            >
+              <FaBars size={24} />
+            </button>
+            <div className="ml-4 text-xl font-semibold md:ml-0">NurseConnect</div>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            {/* Theme Toggle Button */}
+            <ThemeToggle />
+            
+            <div className="text-gray-500">{currentFacility?.name}</div>
+          </div>
         </header>
         
         <main className="flex-1 p-6 overflow-y-auto">

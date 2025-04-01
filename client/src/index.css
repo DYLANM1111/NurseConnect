@@ -50,3 +50,135 @@ code {
     @apply bg-white rounded-lg shadow-md p-6;
   }
 }
+
+/* Base variables */
+:root {
+  /* Light theme (default) */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --border-color: #e5e7eb;
+  --input-bg: #ffffff;
+  --card-bg: #ffffff;
+  --primary-color: #3b82f6;
+  --primary-hover: #2563eb;
+  --success-bg: #d1fae5;
+  --success-text: #047857;
+  --warning-bg: #fef3c7;
+  --warning-text: #92400e;
+  --error-bg: #fee2e2;
+  --error-text: #b91c1c;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Dark theme */
+.dark-mode {
+  --bg-primary: #111827;
+  --bg-secondary: #1f2937;
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --border-color: #374151;
+  --input-bg: #1f2937;
+  --card-bg: #1f2937;
+  --primary-color: #3b82f6;
+  --primary-hover: #60a5fa;
+  --success-bg: #064e3b;
+  --success-text: #a7f3d0;
+  --warning-bg: #78350f;
+  --warning-text: #fcd34d;
+  --error-bg: #7f1d1d;
+  --error-text: #fca5a5;
+  --shadow-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Apply theme variables to elements */
+body {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* Cards and containers */
+.bg-white, 
+.card,
+.shadow-lg,
+.bg-gray-50,
+.bg-gray-100 {
+  background-color: var(--card-bg) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Headers */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary) !important;
+}
+
+/* Form elements */
+input, 
+select, 
+textarea {
+  background-color: var(--input-bg) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Tables */
+table {
+  border-color: var(--border-color) !important;
+}
+
+table th {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-secondary) !important;
+}
+
+table td {
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Status badges */
+.bg-green-100 {
+  background-color: var(--success-bg) !important;
+}
+
+.text-green-800 {
+  color: var(--success-text) !important;
+}
+
+.bg-yellow-100 {
+  background-color: var(--warning-bg) !important;
+}
+
+.text-yellow-800 {
+  color: var(--warning-text) !important;
+}
+
+.bg-red-100 {
+  background-color: var(--error-bg) !important;
+}
+
+.text-red-800 {
+  color: var(--error-text) !important;
+}
+
+/* Buttons */
+.btn {
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+/* Inputs */
+.form-input:focus {
+  border-color: var(--primary-color) !important;
+}
+
+/* Links */
+a {
+  color: var(--primary-color);
+}
+
+a:hover {
+  color: var(--primary-hover);
+}
