@@ -49,45 +49,104 @@ export default function ApplicationsScreen() {
       const userData = await authAPI.getCurrentUser();
       
       if (userData) {
-        // Replace mock data with actual API call
         const response = await apiClient.get(`/nurses/${userData.nurse_profile_id}/applications`);
+        console.log("API response data:", response.data);
         
-        // Transform the API response to match our Application type
-        const apiApplications = response.data.map(app => ({
-          id: app.id,
-          shift_id: app.shift_id,
-          status: app.status,
-          submitted_at: app.created_at,
-          hospital: app.shift.hospital.name,
-          unit: app.shift.unit,
-          date: new Date(app.shift.date).toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric',
-            year: 'numeric'
-          }),
-          startTime: app.shift.start_time,
-          endTime: app.shift.end_time,
-          hourlyRate: parseFloat(app.shift.hourly_rate),
-          specialNotes: app.notes,
-          shiftLength: calculateShiftLength(app.shift.start_time, app.shift.end_time)
-        }));
-        
-        setApplications(apiApplications);
+        if (Array.isArray(response.data) && response.data.length > 0) {
+          const apiApplications = response.data.map(app => {
+            console.log(`Processing raw application data:`, app);
+            
+            let startDate = null;
+            let endDate = null;
+            
+            try {
+              startDate = new Date(app.start_time);
+              endDate = new Date(app.end_time);
+              
+              if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                console.warn(`Invalid date for application ${app.id}. Using fallback.`);
+                startDate = new Date();
+                endDate = new Date();
+                endDate.setHours(startDate.getHours() + 8); 
+              }
+            } catch (err) {
+              console.error(`Error parsing dates for application ${app.id}:`, err);
+              startDate = new Date();
+              endDate = new Date();
+              endDate.setHours(startDate.getHours() + 8);
+            }
+            
+            const date = startDate.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric',
+              year: 'numeric'
+            });
+            
+            // Format the times for display
+            const startTimeStr = startDate.toLocaleTimeString('en-US', { 
+              hour: 'numeric', 
+              minute: '2-digit', 
+              hour12: true 
+            });
+            
+            const endTimeStr = endDate.toLocaleTimeString('en-US', { 
+              hour: 'numeric', 
+              minute: '2-digit', 
+              hour12: true 
+            });
+            
+            const shiftLengthHours = Math.max(1, Math.round((endDate.getTime() - startDate.getTime()) / 3600000));
+            
+            const hourlyRate = !isNaN(parseFloat(app.hourly_rate)) ? 
+                              parseFloat(app.hourly_rate) : 
+                              85.00; 
+            
+            console.log(`Processed data for ${app.id}:`, {
+              date,
+              startTimeStr,
+              endTimeStr,
+              shiftLengthHours,
+              hourlyRate
+            });
+            
+            return {
+              id: app.id,
+              shift_id: app.shift_id,
+              status: app.status,
+              submitted_at: app.created_at,
+              hospital: app.hospital,
+              unit: app.unit,
+              date: date,
+              startTime: startTimeStr,
+              endTime: endTimeStr,
+              hourlyRate: hourlyRate,
+              specialNotes: app.special_notes || '',
+              shiftLength: shiftLengthHours
+            };
+          });
+          
+          console.log("Processed applications:", apiApplications);
+          setApplications(apiApplications);
+        } else {
+          // Handle empty response or non-array data
+          console.log("No applications found or invalid data format");
+          setApplications([]);
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching applications:', error);
+      const errorMessage = error.response?.data?.error || "Failed to load your applications. Please try again.";
       Alert.alert(
         "Error",
-        "Failed to load your applications. Please try again.",
+        errorMessage,
         [{ text: "OK" }]
       );
+      setApplications([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
-
-  // Helper function to calculate shift length from start and end times
   const calculateShiftLength = (startTime: string, endTime: string) => {
     try {
       const [startHour, startMinute] = startTime.split(':').map(Number);
@@ -139,10 +198,17 @@ export default function ApplicationsScreen() {
           onPress: async () => {
             try {
               setLoading(true);
-              // Call API to withdraw application
-              await apiClient.post(`/applications/${applicationId}/withdraw`);
               
-              // Update local state to reflect withdrawal
+              const userData = await authAPI.getCurrentUser();
+              
+              if (!userData || !userData.nurse_profile_id) {
+                throw new Error('User profile data is missing or incomplete');
+              }
+              
+              await apiClient.post(`/applications/${applicationId}/withdraw`, {
+                nurseId: userData.nurse_profile_id
+              });
+              
               setApplications(prev => 
                 prev.map(app => 
                   app.id === applicationId 
@@ -158,9 +224,13 @@ export default function ApplicationsScreen() {
               );
             } catch (error) {
               console.error('Error withdrawing application:', error);
+              
+              const errorMessage = (error as any).response?.data?.error || 
+                                 "Failed to withdraw your application. Please try again.";
+              
               Alert.alert(
                 "Error",
-                "Failed to withdraw your application. Please try again.",
+                errorMessage,
                 [{ text: "OK" }]
               );
             } finally {
@@ -172,7 +242,6 @@ export default function ApplicationsScreen() {
       ]
     );
   };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
@@ -231,8 +300,9 @@ export default function ApplicationsScreen() {
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
   };
-
+  
   const renderApplicationItem = ({ item }: { item: Application }) => {
+
     const isPending = item.status === 'pending';
     const potential_earnings = calculateEarnings(item.hourlyRate, item.shiftLength);
     

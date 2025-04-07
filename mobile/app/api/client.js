@@ -249,12 +249,13 @@ export const applicationsAPI = {
   getNurseApplications: async (nurseId) => {
     try {
       const response = await apiClient.get(`/nurses/${nurseId}/applications`);
+
       return response.data;
     } catch (error) {
       console.error('Error fetching nurse applications:', error);
       
       if (error.response && error.response.status === 404) {
-        return []; // Return empty array for "no applications found"
+        return []; 
       }
       
       throw error.response?.data?.error || 'Failed to fetch applications';

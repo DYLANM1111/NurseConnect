@@ -12,9 +12,7 @@ export const getNurseApplications = async (req, res) => {
       return res.status(404).json({ error: 'No applications found for this nurse' });
     }
     
-    // Format the applications for the mobile app
     const formattedApplications = result.rows.map(app => {
-      // Format start and end time
       const startTime = new Date(app.start_time).toLocaleTimeString('en-US', { 
         hour: 'numeric', 
         minute: '2-digit', 
