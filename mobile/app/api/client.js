@@ -76,6 +76,16 @@ export const authAPI = {
       throw error.response?.data?.error || 'Login failed. Please check your credentials.';
     }
   },
+  //Nurse Details 
+  nurseDetails : async(userId)=>{
+try{
+  const response = await apiClient.get(`nurses/${userId}/profile`);
+  return response.data;
+} catch (error) {
+  console.error('Error fetching nurse profile:', error);
+  throw error.response?.data?.error || 'Failed to fetch nurse profile';
+}
+  },
   
   // Logout
   logout: async () => {
@@ -228,6 +238,48 @@ export const dashboardAPI = {
       }
       
       throw error.response?.data?.error || 'Failed to fetch completed shifts data';
+    }
+  }
+  
+};
+// Add this to your client.js file
+
+export const applicationsAPI = {
+  // Get all applications for a nurse
+  getNurseApplications: async (nurseId) => {
+    try {
+      const response = await apiClient.get(`/nurses/${nurseId}/applications`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching nurse applications:', error);
+      
+      if (error.response && error.response.status === 404) {
+        return []; // Return empty array for "no applications found"
+      }
+      
+      throw error.response?.data?.error || 'Failed to fetch applications';
+    }
+  },
+  
+  // Withdraw an application
+  withdrawApplication: async (applicationId, nurseId) => {
+    try {
+      const response = await apiClient.post(`/applications/${applicationId}/withdraw`, { nurseId });
+      return response.data;
+    } catch (error) {
+      console.error('Error withdrawing application:', error);
+      throw error.response?.data?.error || 'Failed to withdraw application';
+    }
+  },
+  
+  // Get application details
+  getApplicationDetails: async (applicationId) => {
+    try {
+      const response = await apiClient.get(`/applications/${applicationId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching application details:', error);
+      throw error.response?.data?.error || 'Failed to fetch application details';
     }
   }
 };

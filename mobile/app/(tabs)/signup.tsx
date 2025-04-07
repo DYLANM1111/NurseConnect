@@ -438,7 +438,7 @@ export default function SignUpScreen() {
         "Your account has been created. You can now sign in.",
         [{ 
           text: "OK", 
-          onPress: () => router.replace('/signin')
+          onPress: () => router.replace('/index')
         }]
       );
     } catch (error) {

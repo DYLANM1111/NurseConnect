@@ -66,33 +66,66 @@ export default function ApplyShiftScreen() {
     console.log('ShiftId received:', shiftId);
     
     // Fetch user data
-    const fetchUserData = async () => {
+  // Fetch user data
+// Fetch user data
+const fetchUserData = async () => {
+  try {
+    const userData = await authAPI.getCurrentUser();
+    console.log('User data:', userData);
+    
+    if (userData) {
       try {
-        const userData = await authAPI.getCurrentUser();
-        console.log('User data:', userData);
+        const response = await authAPI.nurseDetails(userData.id);
+        console.log('Nurse profile data:', response);
         
-        if (userData) {
-          setNurseProfile({
-            id: userData.id || 'unknown',
-            name: `${userData.first_name} ${userData.last_name}`,
-            specialty: userData.specialty || 'Not specified',
-            licenses: userData.licenses || [],
-            certifications: userData.certifications || [],
-            experience: userData.years_experience || 0,
-            preferences: userData.preferences || {
-              hourlyRate: { min: 0, max: 100 },
-              shiftTypes: [],
-              distance: 25,
-            }
-          });
-        } else {
-          console.log('No user data found');
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
+        // Note the updated property paths
+        const nurseProfileData = response.data;
+        const nurseDetails = nurseProfileData.nurseProfile;
+         // Extract license types from the licenses array
+         const licenses = nurseProfileData.licenses?.map((license: { license_type: any; state: any; }) => 
+          `${license.license_type} (${license.state})`
+        ) || [];
+        
+        // Extract certification names from the certifications array
+        const certifications = nurseProfileData.certifications?.map((cert: { certification_name: any; }) => 
+          cert.certification_name
+        ) || [];
+        setNurseProfile({
+          id: userData.id || 'unknown',
+          name: `${userData.first_name} ${userData.last_name}`,
+          specialty: nurseDetails.specialty || 'Not specified',
+          licenses: licenses,
+          certifications: certifications,
+          experience: nurseDetails.yearsExperience || 0,
+          preferences: {
+            hourlyRate: nurseDetails.hourlyRateRange || { min: 0, max: 100 },
+            shiftTypes: nurseDetails.preferredShiftTypes || [],
+            distance: nurseDetails.preferredDistance || 25,
+          }
+        });
+      } catch (profileError) {
+        console.error('Error fetching nurse profile:', profileError);
+        
+        // Fallback to basic user data
+        setNurseProfile({
+          id: userData.id || 'unknown',
+          name: `${userData.first_name} ${userData.last_name}`,
+          specialty: 'Not specified',
+          licenses: [],
+          certifications: [],
+          experience: 0,
+          preferences: {
+            hourlyRate: { min: 0, max: 100 },
+            shiftTypes: [],
+            distance: 25,
+          }
+        });
       }
-    };
-
+    }
+  } catch (error) {
+    console.error('Error fetching user data:', error);
+  }
+};
     // Fetch shift data
     const fetchShiftData = async () => {
       try {

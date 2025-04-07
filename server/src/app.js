@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import pkg from 'pg';
 import os from 'os';
-
+import applicationRoute from './../Shared/Routes/applicationRoute.js'
 import authRoutes from './../Shared/Routes/authRoutes.js';
 import nurseRoutes from './../Shared/Routes/nurseRoutes.js'
 import dashboardRoutes from './../Shared/Routes/dashboardRoutes.js'
@@ -11,14 +11,20 @@ import { router as shiftRoutes } from './../Shared/Routes/shiftRoutes.js'
 
 
 const { Pool } = pkg;
-const pool = new Pool({
-  user: 'dylanmuroki',         
-  database: 'nurseconnect',   
-  host: '127.0.0.1',          
-  port: 5432,                  
-  password: '', 
-});
 
+const pool = new Pool({
+  user: 'database',                                 
+  host: 'nurseconnect.postgres.database.azure.com', 
+  database: 'nurseconnect',                             
+  password: 'Nurseconnect!',                      
+  port: 5432,                                      
+  ssl: {
+    rejectUnauthorized: false                      
+  }
+});
+pool.on('connect', client => {
+  client.query('SET search_path TO public');
+});
 // Test database connection
 pool.query('SELECT NOW()', (err, res) => {
   if (err) {
@@ -47,7 +53,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api', nurseRoutes);
 app.use('/api', shiftRoutes);
 app.use('/api', dashboardRoutes);
-
+app.use('/api', applicationRoute)
 
 console.log('Registered routes:');
 app._router.stack.forEach(function(r) {

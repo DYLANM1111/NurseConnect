@@ -87,13 +87,13 @@ export default function ShiftDetailsScreen() {
         // Mock data for development
         const mockShift: ShiftDetails = {
           id: shiftId || '123',
-          hospital: 'Stanford Medical Center',
+          hospital: 'Duke Medical Center',
           unit: 'Intensive Care Unit',
           date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
           startTime: '07:00',
           endTime: '19:00',
           rate: 95.50,
-          address: '300 Pasteur Drive, Stanford, CA 94305',
+          address: '300 Pasteur Drive, Stanford, NC 24305',
           coordinates: {
             latitude: 37.4337,
             longitude: -122.1751
