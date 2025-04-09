@@ -87,7 +87,6 @@ try{
 }
   },
   
-  // Logout
   logout: async () => {
     try {
       await AsyncStorage.removeItem('user');

@@ -17,7 +17,6 @@ import {
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { shiftsAPI } from '../../api/client';
 
 const { width } = Dimensions.get('window');
 

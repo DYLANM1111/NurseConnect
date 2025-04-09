@@ -120,7 +120,7 @@ export default function DashboardScreen() {
   };
 
   const handleFindShifts = () => {
-    router.push('/find-shifts');
+    router.push('/home');
   };
 
   const handleViewProfile = () => {
@@ -315,7 +315,12 @@ export default function DashboardScreen() {
             <TouchableOpacity 
               key={shift.id}
               style={styles.pastShiftCard}
-              onPress={() => router.push(`/shift/${shift.id}`)}
+              onPress={() => {
+                console.log("Navigating to shift with ID:", shift.id);
+                router.push(`/(tabs)/shift[id]?id=${shift.id}`);
+              }}
+
+
             >
               <View style={styles.pastShiftHeader}>
                 <Text style={styles.pastShiftDate}>{shift.date}</Text>
