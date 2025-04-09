@@ -273,7 +273,10 @@ export default function DashboardScreen() {
         ) : upcomingShift ? (
           <TouchableOpacity 
             style={styles.upcomingShiftCard}
-            onPress={() => router.push(`/shift/${upcomingShift.id}`)}
+            onPress={() => {
+              console.log("Navigating to UPCOMING with ID:", upcomingShift.id);
+              router.push(`/(tabs)/nextShift/${upcomingShift.id}`);
+            }}
           >
             <View style={styles.shiftTimeTag}>
               <Text style={styles.shiftTimeText}>{upcomingShift.date} • {upcomingShift.time}</Text>

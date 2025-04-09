@@ -124,23 +124,24 @@ export default function TabLayout() {
       <Tabs.Screen
         name="editProfile"
         options={{
-          href: null, // This hides it from the tab bar
+          href: null, 
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          href: null, // This hides it from the tab bar
-        }}
-      />
-      <Tabs.Screen
-        name="shift-details"
-        options={{
           href: null, 
         }}
       />
+   
       <Tabs.Screen
   name="shift[id]"
+  options={{
+    href: null, 
+  }}
+/>
+<Tabs.Screen
+  name="nextShift/[id]"
   options={{
     href: null, 
   }}

@@ -134,23 +134,23 @@ export const shiftsAPI = {
   
   getShiftDetails: async (id) => {
     try {
-      console.log(`Fetching shift details for ID: ${id}`);
+      console.log(`[API] Fetching shift details for ID: ${id}`);
+      console.log(`[API] Request URL: shifts/${id}`);
+      
       const response = await apiClient.get(`shifts/${id}`);
+      console.log(`[API] Response status: ${response.status}`);
+      console.log(`[API] Response data:`, response.data);
+      
       return response.data;
     } catch (error) {
-      console.error('Error fetching shift details:', error);
-      // Detailed error logging
-      if (error.response) {
-        console.log('Error status:', error.response.status);
-        console.log('Error data:', error.response.data);
-      } else if (error.request) {
-        console.log('No response received:', error.request);
-      } else {
-        console.log('Error configuring request:', error.message);
-      }
+      console.error('[API] Error fetching shift details:', error);
       
-      if (error.response?.status === 404) {
-        throw 'Shift not found - it may have been filled or removed';
+      if (error.response) {
+        console.error('[API] Error response:', error.response.status, error.response.data);
+      } else if (error.request) {
+        console.error('[API] No response received from server');
+      } else {
+        console.error('[API] Error setting up request:', error.message);
       }
       
       throw error.response?.data?.error || 'Failed to fetch shift details';
