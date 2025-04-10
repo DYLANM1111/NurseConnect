@@ -11,6 +11,7 @@ import {
   Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dashboardAPI } from '../api/client';
@@ -143,13 +144,15 @@ export default function DashboardScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Dashboard</Text>
         <TouchableOpacity 
-          style={styles.profileButton}
-          onPress={handleViewProfile}
-        >
-          <View style={styles.avatar}>
-            <Ionicons name="person" size={22} color="#8F9BB3" />
-          </View>
-        </TouchableOpacity>
+  style={styles.profileButton}
+  onPress={handleViewProfile}
+>
+  <Image
+    source={require('../../assets/images/dog3.jpg')} 
+    style={styles.avatar}
+    resizeMode="cover"
+  />
+</TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>

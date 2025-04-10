@@ -853,9 +853,10 @@ export default function HomeScreen() {
               style={styles.profileButton}
               onPress={() => router.push('/profile')}
             >
-              <View style={styles.avatarPlaceholder}>
-                <Ionicons name="person" size={20} color="#8F9BB3" />
-              </View>
+              <Image 
+  source={require('../../assets/images/dog3.jpg')}
+  style={{ width: '100%', height: '100%', borderRadius: 20 }}
+/>
             </TouchableOpacity>
           </View>
         </View>

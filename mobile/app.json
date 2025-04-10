@@ -37,7 +37,11 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-network",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow $(nurseConnect) to use your location."
+        }
     ],
     "experiments": {
       "typedRoutes": true

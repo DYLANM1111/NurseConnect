@@ -10,11 +10,13 @@ import {
   Alert,
   TextInput,
   Platform,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
+  Dimensions
 } from 'react-native';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { authAPI, shiftsAPI } from '../api/client';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Shift = {
   id: string;
@@ -52,6 +54,7 @@ export default function ApplyShiftScreen() {
   const params = useLocalSearchParams();
   const shiftId = typeof params.id === 'string' ? params.id : Array.isArray(params.id) ? params.id[0] : '';
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   
   const [loading, setLoading] = useState(true);
   const [shift, setShift] = useState<Shift | null>(null);
@@ -66,66 +69,65 @@ export default function ApplyShiftScreen() {
     console.log('ShiftId received:', shiftId);
     
     // Fetch user data
-  // Fetch user data
-// Fetch user data
-const fetchUserData = async () => {
-  try {
-    const userData = await authAPI.getCurrentUser();
-    console.log('User data:', userData);
-    
-    if (userData) {
+    const fetchUserData = async () => {
       try {
-        const response = await authAPI.nurseDetails(userData.id);
-        console.log('Nurse profile data:', response);
+        const userData = await authAPI.getCurrentUser();
+        console.log('User data:', userData);
         
-        // Note the updated property paths
-        const nurseProfileData = response.data;
-        const nurseDetails = nurseProfileData.nurseProfile;
-         // Extract license types from the licenses array
-         const licenses = nurseProfileData.licenses?.map((license: { license_type: any; state: any; }) => 
-          `${license.license_type} (${license.state})`
-        ) || [];
-        
-        // Extract certification names from the certifications array
-        const certifications = nurseProfileData.certifications?.map((cert: { certification_name: any; }) => 
-          cert.certification_name
-        ) || [];
-        setNurseProfile({
-          id: userData.id || 'unknown',
-          name: `${userData.first_name} ${userData.last_name}`,
-          specialty: nurseDetails.specialty || 'Not specified',
-          licenses: licenses,
-          certifications: certifications,
-          experience: nurseDetails.yearsExperience || 0,
-          preferences: {
-            hourlyRate: nurseDetails.hourlyRateRange || { min: 0, max: 100 },
-            shiftTypes: nurseDetails.preferredShiftTypes || [],
-            distance: nurseDetails.preferredDistance || 25,
+        if (userData) {
+          try {
+            const response = await authAPI.nurseDetails(userData.id);
+            console.log('Nurse profile data:', response);
+            
+            // Note the updated property paths
+            const nurseProfileData = response.data;
+            const nurseDetails = nurseProfileData.nurseProfile;
+            // Extract license types from the licenses array
+            const licenses = nurseProfileData.licenses?.map((license: { license_type: any; state: any; }) => 
+              `${license.license_type} (${license.state})`
+            ) || [];
+            
+            // Extract certification names from the certifications array
+            const certifications = nurseProfileData.certifications?.map((cert: { certification_name: any; }) => 
+              cert.certification_name
+            ) || [];
+            setNurseProfile({
+              id: userData.id || 'unknown',
+              name: `${userData.first_name} ${userData.last_name}`,
+              specialty: nurseDetails.specialty || 'Not specified',
+              licenses: licenses,
+              certifications: certifications,
+              experience: nurseDetails.yearsExperience || 0,
+              preferences: {
+                hourlyRate: nurseDetails.hourlyRateRange || { min: 0, max: 100 },
+                shiftTypes: nurseDetails.preferredShiftTypes || [],
+                distance: nurseDetails.preferredDistance || 25,
+              }
+            });
+          } catch (profileError) {
+            console.error('Error fetching nurse profile:', profileError);
+            
+            // Fallback to basic user data
+            setNurseProfile({
+              id: userData.id || 'unknown',
+              name: `${userData.first_name} ${userData.last_name}`,
+              specialty: 'Not specified',
+              licenses: [],
+              certifications: [],
+              experience: 0,
+              preferences: {
+                hourlyRate: { min: 0, max: 100 },
+                shiftTypes: [],
+                distance: 25,
+              }
+            });
           }
-        });
-      } catch (profileError) {
-        console.error('Error fetching nurse profile:', profileError);
-        
-        // Fallback to basic user data
-        setNurseProfile({
-          id: userData.id || 'unknown',
-          name: `${userData.first_name} ${userData.last_name}`,
-          specialty: 'Not specified',
-          licenses: [],
-          certifications: [],
-          experience: 0,
-          preferences: {
-            hourlyRate: { min: 0, max: 100 },
-            shiftTypes: [],
-            distance: 25,
-          }
-        });
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
       }
-    }
-  } catch (error) {
-    console.error('Error fetching user data:', error);
-  }
-};
+    };
+    
     // Fetch shift data
     const fetchShiftData = async () => {
       try {
@@ -205,6 +207,9 @@ const fetchUserData = async () => {
     );
   }
 
+  // Calculate bottom padding to avoid tab bar overlap
+  const bottomPadding = Platform.OS === 'ios' ? Math.max(insets.bottom, 20) + 50 : 70;
+
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -218,7 +223,10 @@ const fetchUserData = async () => {
           }}
         />
         
-        <ScrollView style={styles.content}>
+        <ScrollView 
+          style={styles.content}
+          contentContainerStyle={{ paddingBottom: bottomPadding }}
+        >
           {step === 1 && (
             <View style={styles.stepContainer}>
               <View style={styles.progressBar}>
@@ -278,26 +286,30 @@ const fetchUserData = async () => {
                 
                 <View style={styles.descriptionSection}>
                   <Text style={styles.sectionTitle}>Shift Description</Text>
-                  <Text style={styles.descriptionText}>{shift.description}</Text>
+                  <Text style={styles.descriptionText}>{shift.description || "No additional description provided."}</Text>
                 </View>
                 
                 <View style={styles.divider} />
                 
                 <View style={styles.requirementsSection}>
                   <Text style={styles.sectionTitle}>Requirements</Text>
-                  {shift.requirements?.map((req, index) => (
-                    <View key={index} style={styles.requirementItem}>
-                      <Ionicons name="checkmark-circle" size={18} color="#10B981" style={styles.requirementIcon} />
-                      <Text style={styles.requirementText}>{req}</Text>
-                    </View>
-                  ))}
+                  {shift.requirements && shift.requirements.length > 0 ? (
+                    shift.requirements.map((req, index) => (
+                      <View key={index} style={styles.requirementItem}>
+                        <Ionicons name="checkmark-circle" size={18} color="#10B981" style={styles.requirementIcon} />
+                        <Text style={styles.requirementText}>{req}</Text>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.noDataText}>No specific requirements listed</Text>
+                  )}
                 </View>
                 
                 <View style={styles.divider} />
                 
                 <View style={styles.contactSection}>
                   <Text style={styles.sectionTitle}>Contact</Text>
-                  <Text style={styles.contactText}>{shift.contact}</Text>
+                  <Text style={styles.contactText}>{shift.contact || "Contact information will be provided after application is approved."}</Text>
                 </View>
               </View>
               
@@ -644,17 +656,17 @@ const styles = StyleSheet.create({
   requirementItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   requirementIcon: {
-    marginRight: 8,
+    marginRight: 7,
   },
   requirementText: {
     fontSize: 14,
     color: '#4B5563',
   },
   contactSection: {
-    marginBottom: 8,
+    marginBottom: 0,
   },
   contactText: {
     fontSize: 14,
@@ -665,7 +677,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 0,
   },
   continueButtonText: {
     color: '#FFFFFF',
@@ -869,7 +881,8 @@ const styles = StyleSheet.create({
   confirmationText: {
     fontSize: 16,
     color: '#4B5563',
-    textAlign: 'center',marginBottom: 24,
+    textAlign: 'center',
+    marginBottom: 24,
     lineHeight: 24,
   },
   applicationDetails: {
