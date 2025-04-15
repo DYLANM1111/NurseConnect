@@ -35,7 +35,7 @@ export const createShift = async (shiftData) => {
 export const updateShift = async (id, shiftData) => {
   try {
     console.log('Updating shift ID', id, 'with data:', shiftData);
-    const response = await api.put(`/api/shifts/${id}`, shiftData);
+    const response = await api.put(`/api/shifts/edit/${id}`, shiftData);
     console.log('Server response:', response);
     return response.data;
   } catch (error) {

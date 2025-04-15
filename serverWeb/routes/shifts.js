@@ -27,7 +27,7 @@ router.post('/',
 );
 
 // Update shift
-router.put('/:id', 
+router.put('/edit/:id', 
   authenticateToken, 
   shiftValidationRules,
   handleValidationErrors,

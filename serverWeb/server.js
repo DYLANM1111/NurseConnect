@@ -14,7 +14,7 @@ const app = express();
 
 // Configure middleware
 app.use(cors({
-  origin: 'http://localhost:5173', // Allow your frontend URL
+  origin: 'http://localhost:5173', // Allow our frontend URL
   credentials: true
 }));
 app.use(express.json()); // This needs to be before routes to parse JSON bodies
@@ -563,6 +563,73 @@ app.get('/api/shifts', async (req, res) => {
   } catch (error) {
     console.error('Error getting shifts:', error);
     res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+
+// ADDING THE EDIT UPDATE ROUTE
+app.put('/api/shifts/edit/:id', async (req, res) => {
+  try {
+    const shiftId = req.params.id;
+    const {
+      facility_id,
+      unit,
+      shift_type,
+      start_time,
+      end_time,
+      hourly_rate,
+      status,
+      requirements
+    } = req.body;
+
+    console.log(`Trying to update shift with id ${shiftId}`, req.body);
+
+    //checking if the shift exists
+    const checkQuery = `SELECT * FROM shifts WHERE id = $1`;
+    const checkResult = await db.query(checkQuery, [shiftId]);
+
+    if (checkResult.rows.length === 0){
+      console.log(`Shift with id ${req.params.id} does not exist`);
+      return res.status(404).json({error: 'shift not found'});
+    }
+    
+  
+
+    //updating the shift
+    const updateQuery = `
+      UPDATE shifts
+      SET
+        facility_id = $1,
+        unit = $2,
+        shift_type = $3,
+        start_time = $4,
+        end_time = $5,
+        hourly_rate = $6,
+        status = $7,
+        requirements = $8
+      WHERE id = $9
+      RETURNING *
+    `;
+
+    const values = [
+      facility_id,
+      unit,
+      shift_type,
+      start_time,
+      end_time,
+      hourly_rate,
+      status,
+      requirements || [],
+      shiftId
+    ];
+
+    const result = await db.query(updateQuery, values);
+
+    console.log(`Successfully updated the shift id: ${req.params.id}`);
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    console.error(`Error in updating the shift with id ${req.params.id}`, error);
+    res.status(500).json({ error: 'Server error', details: error.message});
   }
 });
 
