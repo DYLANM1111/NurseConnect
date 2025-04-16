@@ -65,7 +65,6 @@ export default function ShiftDetailsScreen() {
         // Process data for display
         const processedShift = {
           ...shiftData,
-          // Ensure required fields have fallback values for display
           hospital: shiftData.hospital || "Unnamed Facility",
           unit: shiftData.unit || "Unspecified Unit",
           startTime: shiftData.startTime || shiftData.start_time || "Not specified",
@@ -123,7 +122,7 @@ export default function ShiftDetailsScreen() {
   };
 
   const handleGoBack = () => {
-    router.back();
+    router.push('/dashboards');
   };
 
   if (loading) {
