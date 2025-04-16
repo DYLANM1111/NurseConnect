@@ -52,7 +52,9 @@ type NurseProfile = {
 
 export default function ApplyShiftScreen() {
   const params = useLocalSearchParams();
-  const shiftId = typeof params.id === 'string' ? params.id : Array.isArray(params.id) ? params.id[0] : '';
+  const { id } = params;
+  const cleanId = typeof id === 'string' ? id.split('?')[0] : Array.isArray(id) ? id[0].split('?')[0] : '';
+
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const resetKey = typeof params.reset === 'string' ? params.reset : 'default';
@@ -68,7 +70,7 @@ export default function ApplyShiftScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    console.log('ShiftId received:', shiftId);
+    console.log('ShiftId received:', cleanId);
 
     // Fetch user data
     const fetchUserData = async () => {
@@ -133,7 +135,7 @@ export default function ApplyShiftScreen() {
     // Fetch shift data
     const fetchShiftData = async () => {
       try {
-        const shiftData = await shiftsAPI.getShiftDetails(shiftId);
+        const shiftData = await shiftsAPI.getShiftDetails(cleanId);
         console.log('Shift data from API:', shiftData);
         setShift(shiftData);
       } catch (error) {
@@ -145,7 +147,7 @@ export default function ApplyShiftScreen() {
     
     fetchUserData();
     fetchShiftData();
-  }, [shiftId]);
+  }, [cleanId]);
 
 
 useEffect(() => {
@@ -178,7 +180,7 @@ const handleSubmitApplication = async () => {
       status: "pending" 
     });
     
-    await shiftsAPI.applyForShift(shiftId, {
+    await shiftsAPI.applyForShift(cleanId, {
       specialNotes: specialNotes,
       availabilityConfirmed: availability,
       status: "pending" 

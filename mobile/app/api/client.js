@@ -157,31 +157,34 @@ export const shiftsAPI = {
     }
   },
   
-applyForShift: async (shiftId, applicationData) => {
-  try {
-    const user = await authAPI.getCurrentUser();
-    
-    if (!user || !user.nurse_profile_id) {
-      throw 'User profile not found or incomplete. Please update your profile.';
+  applyForShift: async (shiftId, applicationData) => {
+    try {
+      const user = await authAPI.getCurrentUser();
+      
+      if (!user || !user.nurse_profile_id) {
+        throw 'User profile not found or incomplete. Please update your profile.';
+      }      
+      const completeApplicationData = {
+        nurseId: user.nurse_profile_id,
+        nurse_id: user.nurse_profile_id,
+        nurse_profile_id: user.nurse_profile_id,
+
+        
+        specialNotes: applicationData.specialNotes || '',
+        availabilityConfirmed: applicationData.availabilityConfirmed || true
+      };
+      
+      console.log('[API] Applying for shift with data:', completeApplicationData);
+      console.log(`[API] Request URL: shifts/${shiftId}/apply`); // Log the URL for debugging
+      
+      const response = await apiClient.post(`shifts/${shiftId}/apply`, completeApplicationData);
+      console.log('[API] Application response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error applying for shift:', error);
+      throw error.response?.data?.error || 'Failed to apply for shift';
     }
-    const completeApplicationData = {
-      nurseId: user.nurse_profile_id,
-      nurse_id: user.nurse_profile_id, 
-      nurse_profile_id: user.nurse_profile_id,
-      specialNotes: applicationData.specialNotes || '',
-      availabilityConfirmed: applicationData.availabilityConfirmed || true
-    };
-    
-    console.log('[API] Applying for shift with data:', completeApplicationData);
-    
-    const response = await apiClient.post(`shifts/${shiftId}/apply`, completeApplicationData);
-    console.log('[API] Application response:', response.data);
-    return response.data;
-  } catch (error) {
-    console.error('Error applying for shift:', error);
-    throw error.response?.data?.error || 'Failed to apply for shift';
   }
-}
 };
 
 export const dashboardAPI = {
