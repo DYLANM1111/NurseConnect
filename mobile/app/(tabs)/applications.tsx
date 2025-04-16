@@ -47,27 +47,29 @@ export default function ApplicationsScreen() {
   const fetchApplications = async () => {
     try {
       const userData = await authAPI.getCurrentUser();
-      
+
       if (userData) {
-        const response = await apiClient.get(`/nurses/${userData.nurse_profile_id}/applications`);
+        console.log('User data for applications:', userData);
+        const profileId = userData.nurse_profile_id || userData.id;
+        console.log('Using profile ID for applications:', profileId);
+        const response = await apiClient.get(`/nurses/${profileId}/applications`);
         console.log("API response data:", response.data);
-        
         if (Array.isArray(response.data) && response.data.length > 0) {
           const apiApplications = response.data.map(app => {
             console.log(`Processing raw application data:`, app);
-            
+
             let startDate = null;
             let endDate = null;
-            
+
             try {
               startDate = new Date(app.start_time);
               endDate = new Date(app.end_time);
-              
+
               if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
                 console.warn(`Invalid date for application ${app.id}. Using fallback.`);
                 startDate = new Date();
                 endDate = new Date();
-                endDate.setHours(startDate.getHours() + 8); 
+                endDate.setHours(startDate.getHours() + 8);
               }
             } catch (err) {
               console.error(`Error parsing dates for application ${app.id}:`, err);
@@ -75,32 +77,32 @@ export default function ApplicationsScreen() {
               endDate = new Date();
               endDate.setHours(startDate.getHours() + 8);
             }
-            
-            const date = startDate.toLocaleDateString('en-US', { 
-              month: 'short', 
+
+            const date = startDate.toLocaleDateString('en-US', {
+              month: 'short',
               day: 'numeric',
               year: 'numeric'
             });
-            
+
             // Format the times for display
-            const startTimeStr = startDate.toLocaleTimeString('en-US', { 
-              hour: 'numeric', 
-              minute: '2-digit', 
-              hour12: true 
+            const startTimeStr = startDate.toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
             });
-            
-            const endTimeStr = endDate.toLocaleTimeString('en-US', { 
-              hour: 'numeric', 
-              minute: '2-digit', 
-              hour12: true 
+
+            const endTimeStr = endDate.toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
             });
-            
+
             const shiftLengthHours = Math.max(1, Math.round((endDate.getTime() - startDate.getTime()) / 3600000));
-            
-            const hourlyRate = !isNaN(parseFloat(app.hourly_rate)) ? 
-                              parseFloat(app.hourly_rate) : 
-                              85.00; 
-            
+
+            const hourlyRate = !isNaN(parseFloat(app.hourly_rate)) ?
+              parseFloat(app.hourly_rate) :
+              85.00;
+
             console.log(`Processed data for ${app.id}:`, {
               date,
               startTimeStr,
@@ -108,7 +110,7 @@ export default function ApplicationsScreen() {
               shiftLengthHours,
               hourlyRate
             });
-            
+
             return {
               id: app.id,
               shift_id: app.shift_id,
@@ -124,7 +126,7 @@ export default function ApplicationsScreen() {
               shiftLength: shiftLengthHours
             };
           });
-          
+
           console.log("Processed applications:", apiApplications);
           setApplications(apiApplications);
         } else {
@@ -151,19 +153,19 @@ export default function ApplicationsScreen() {
     try {
       const [startHour, startMinute] = startTime.split(':').map(Number);
       const [endHour, endMinute] = endTime.split(':').map(Number);
-      
+
       let hours = endHour - startHour;
       let minutes = endMinute - startMinute;
-      
+
       if (minutes < 0) {
         hours -= 1;
         minutes += 60;
       }
-      
+
       if (hours < 0) {
         hours += 24; // Handle overnight shifts
       }
-      
+
       return hours + (minutes / 60);
     } catch (error) {
       console.error('Error calculating shift length:', error);
@@ -193,30 +195,30 @@ export default function ApplicationsScreen() {
           text: "Cancel",
           style: "cancel"
         },
-        { 
-          text: "Withdraw", 
+        {
+          text: "Withdraw",
           onPress: async () => {
             try {
               setLoading(true);
-              
+
               const userData = await authAPI.getCurrentUser();
-              
+
               if (!userData || !userData.nurse_profile_id) {
                 throw new Error('User profile data is missing or incomplete');
               }
-              
+
               await apiClient.post(`/applications/${applicationId}/withdraw`, {
                 nurseId: userData.nurse_profile_id
               });
-              
-              setApplications(prev => 
-                prev.map(app => 
-                  app.id === applicationId 
-                    ? {...app, status: 'withdrawn' as const} 
+
+              setApplications(prev =>
+                prev.map(app =>
+                  app.id === applicationId
+                    ? { ...app, status: 'withdrawn' as const }
                     : app
                 )
               );
-              
+
               Alert.alert(
                 "Success",
                 "Your application has been withdrawn.",
@@ -224,10 +226,10 @@ export default function ApplicationsScreen() {
               );
             } catch (error) {
               console.error('Error withdrawing application:', error);
-              
-              const errorMessage = (error as any).response?.data?.error || 
-                                 "Failed to withdraw your application. Please try again.";
-              
+
+              const errorMessage = (error as any).response?.data?.error ||
+                "Failed to withdraw your application. Please try again.";
+
               Alert.alert(
                 "Error",
                 errorMessage,
@@ -289,7 +291,7 @@ export default function ApplicationsScreen() {
     const date = new Date(dateString);
     const now = new Date();
     const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) {
       return 'Today';
     } else if (diffDays === 1) {
@@ -300,12 +302,12 @@ export default function ApplicationsScreen() {
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
   };
-  
+
   const renderApplicationItem = ({ item }: { item: Application }) => {
 
     const isPending = item.status === 'pending';
     const potential_earnings = calculateEarnings(item.hourlyRate, item.shiftLength);
-    
+
     return (
       <View style={styles.applicationCard}>
         <View style={styles.cardHeader}>
@@ -317,12 +319,12 @@ export default function ApplicationsScreen() {
             Applied {formatDate(item.submitted_at)}
           </Text>
         </View>
-        
+
         <Text style={styles.hospitalName}>{item.hospital}</Text>
         <Text style={styles.unitName}>{item.unit}</Text>
-        
+
         <View style={styles.divider} />
-        
+
         <View style={styles.detailsRow}>
           <View style={styles.detailsColumn}>
             <View style={styles.iconLabelContainer}>
@@ -339,7 +341,7 @@ export default function ApplicationsScreen() {
             <Text style={styles.detailValue}>{item.startTime} - {item.endTime}</Text>
           </View>
         </View>
-        
+
         <View style={styles.detailsRow}>
           <View style={styles.detailsColumn}>
             <View style={styles.iconLabelContainer}>
@@ -356,16 +358,16 @@ export default function ApplicationsScreen() {
             <Text style={styles.rateValue}>${potential_earnings.toFixed(2)}</Text>
           </View>
         </View>
-        
+
         {item.specialNotes && (
           <View style={styles.notesSection}>
             <Text style={styles.notesLabel}>Your Notes:</Text>
             <Text style={styles.notesText}>{item.specialNotes}</Text>
           </View>
         )}
-        
+
         <View style={styles.actionButtons}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.viewShiftButton}
             onPress={() => handleViewShift(item.shift_id)}
             accessibilityLabel={`View shift details for ${item.hospital} ${item.unit}`}
@@ -374,9 +376,9 @@ export default function ApplicationsScreen() {
             <Ionicons name="eye-outline" size={16} color="#0065FF" style={styles.buttonIcon} />
             <Text style={styles.viewShiftButtonText}>View Details</Text>
           </TouchableOpacity>
-          
+
           {isPending && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.withdrawButton}
               onPress={() => handleWithdrawApplication(item.id, item.hospital)}
               accessibilityLabel={`Withdraw application for ${item.hospital} ${item.unit}`}
@@ -401,7 +403,7 @@ export default function ApplicationsScreen() {
           <Text style={styles.emptyStateText}>
             You don't have any applications with this status.
           </Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.viewAllButton}
             onPress={() => setSelectedFilter('all')}
             accessibilityLabel="View all applications"
@@ -412,7 +414,7 @@ export default function ApplicationsScreen() {
         </View>
       );
     }
-    
+
     return (
       <View style={styles.emptyStateContainer}>
         <Ionicons name="document-text-outline" size={60} color="#D1D5DB" />
@@ -420,7 +422,7 @@ export default function ApplicationsScreen() {
         <Text style={styles.emptyStateText}>
           You haven't applied to any shifts yet. Start browsing available shifts to apply.
         </Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.findShiftsButton}
           onPress={() => router.push('/find-shifts')}
           accessibilityLabel="Find shifts to apply for"
@@ -435,7 +437,7 @@ export default function ApplicationsScreen() {
 
   const renderFilterTab = (label: string, value: string) => {
     const isActive = selectedFilter === value;
-    
+
     return (
       <TouchableOpacity
         style={[styles.filterTab, isActive && styles.activeFilterTab]}
@@ -461,7 +463,7 @@ export default function ApplicationsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Stack.Screen 
+      <Stack.Screen
         options={{
           title: 'My Applications',
           headerBackTitle: 'Back',
@@ -471,7 +473,7 @@ export default function ApplicationsScreen() {
           }
         }}
       />
-      
+
       <View style={styles.container}>
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -489,7 +491,7 @@ export default function ApplicationsScreen() {
                 {renderFilterTab(`Withdrawn (${counts.withdrawn})`, 'withdrawn')}
               </View>
             )}
-            
+
             <FlatList
               data={filteredApplications}
               renderItem={renderApplicationItem}

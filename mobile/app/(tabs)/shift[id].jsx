@@ -101,7 +101,6 @@ export default function ShiftDetailsScreen() {
   // Helper function to calculate shift length if not provided
   const calculateShiftLength = (shiftData) => {
     if (shiftData.start_time && shiftData.end_time && typeof shiftData.start_time === 'string') {
-      // This is a simplified calculation for demo purposes
       // In a real app, you'd parse the times properly and calculate hours
       return 12; // Default to 12 hours if we can't calculate
     }

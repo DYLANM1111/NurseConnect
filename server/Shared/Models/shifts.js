@@ -88,7 +88,19 @@ class Shift {
   
   static async createApplication(applicationData) {
     try {
-      const { shift_id, nurse_id, special_notes, availability_confirmed } = applicationData;
+      const { 
+        shift_id, 
+        nurse_id, 
+        nurseId,
+        nurse_profile_id,
+        special_notes, 
+        specialNotes,
+        availability_confirmed,
+        availabilityConfirmed 
+      } = applicationData;   
+      const finalNurseId = nurse_id || nurseId || nurse_profile_id;
+      const finalSpecialNotes = special_notes || specialNotes || null;
+      const finalAvailability = availability_confirmed || availabilityConfirmed || true;
       
       const query = `
         INSERT INTO applications 
@@ -100,9 +112,9 @@ class Shift {
       
       const values = [
         shift_id,
-        nurse_id,
-        special_notes || null,
-        availability_confirmed
+        finalNurseId,
+        finalSpecialNotes,
+        finalAvailability
       ];
       
       const result = await pool.query(query, values);

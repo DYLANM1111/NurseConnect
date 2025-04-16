@@ -55,6 +55,8 @@ export default function ApplyShiftScreen() {
   const shiftId = typeof params.id === 'string' ? params.id : Array.isArray(params.id) ? params.id[0] : '';
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const resetKey = typeof params.reset === 'string' ? params.reset : 'default';
+
   
   const [loading, setLoading] = useState(true);
   const [shift, setShift] = useState<Shift | null>(null);
@@ -67,7 +69,7 @@ export default function ApplyShiftScreen() {
 
   useEffect(() => {
     console.log('ShiftId received:', shiftId);
-    
+
     // Fetch user data
     const fetchUserData = async () => {
       try {
@@ -131,7 +133,6 @@ export default function ApplyShiftScreen() {
     // Fetch shift data
     const fetchShiftData = async () => {
       try {
-        // Try to get shift from API
         const shiftData = await shiftsAPI.getShiftDetails(shiftId);
         console.log('Shift data from API:', shiftData);
         setShift(shiftData);
@@ -146,41 +147,58 @@ export default function ApplyShiftScreen() {
     fetchShiftData();
   }, [shiftId]);
 
-  // Check qualification match when both nurse and shift data are available
+
+useEffect(() => {
+  setStep(1);
+}, [resetKey]);
   useEffect(() => {
     if (shift && nurseProfile) {
       console.log('Comparing specialties:', shift.specialty, nurseProfile.specialty);
       setQualificationsMatch(shift.specialty === nurseProfile.specialty);
     }
   }, [shift, nurseProfile]);
-
-  const handleSubmitApplication = async () => {
-    if (!availability) {
-      Alert.alert(
-        "Availability Conflict",
-        "You've indicated a potential conflict with this shift. Please confirm your availability before applying.",
-        [{ text: "OK" }]
-      );
-      return;
-    }
+  
+const handleSubmitApplication = async () => {
+  console.log('Starting application submission, current step:', step);
+  if (!availability) {
+    Alert.alert(
+      "Availability Conflict",
+      "You've indicated a potential conflict with this shift. Please confirm your availability before applying.",
+      [{ text: "OK" }]
+    );
+    return;
+  }
+  
+  setSubmitting(true);
+  
+  try {
+    console.log('Sending application data to API:', {
+      specialNotes,
+      availabilityConfirmed: availability,
+      status: "pending" 
+    });
     
-    setSubmitting(true);
+    await shiftsAPI.applyForShift(shiftId, {
+      specialNotes: specialNotes,
+      availabilityConfirmed: availability,
+      status: "pending" 
+    });
     
-    try {
-      await shiftsAPI.applyForShift(shiftId, {
-        specialNotes: specialNotes,
-        availabilityConfirmed: availability
-      });
-      setStep(3);
-    } catch (error) {
-      console.error('Error applying for shift:', error);
-      setTimeout(() => {
-        setStep(3); 
-      }, 1200);
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    console.log('Application successfully submitted, advancing to step 3');
+    setStep(3); 
+  } catch (error) {
+    console.error('Error applying for shift:', error);
+    
+   
+    Alert.alert(
+      "Application Error",
+      "There was an error submitting your application. Please try again.",
+      [{ text: "OK" }]
+    );
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   if (loading) {
     return (

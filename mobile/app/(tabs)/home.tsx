@@ -803,11 +803,14 @@ export default function HomeScreen() {
       </View>
       
       <TouchableOpacity 
-        style={styles.applyButton}
-        onPress={() => router.push(`/apply[id]?id=${shift.id}`)}
-        >
-        <Text style={styles.applyButtonText}>Apply</Text>
-      </TouchableOpacity>
+  style={styles.applyButton}
+  onPress={() => router.push({
+    pathname: `/apply[id]?id=${shift.id}`,
+    params: { reset: Date.now().toString() }
+  })}
+>
+  <Text style={styles.applyButtonText}>Apply</Text>
+</TouchableOpacity>
     </TouchableOpacity>
   );
 
