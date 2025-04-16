@@ -26,7 +26,7 @@ const shiftSchema = Yup.object().shape({
     .min(0, 'Hourly rate must be at least 0'),
   status: Yup.string()
     .required('Status is required')
-    .oneOf(['open'], 'New shifts must have "open" status'),
+    .oneOf(['open', 'assigned', 'completed', 'cancelled'], 'New shifts must have "open" status'),
   requirements: Yup.array().of(Yup.string())
 });
 
