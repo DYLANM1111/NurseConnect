@@ -11,6 +11,7 @@ import {
   Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dashboardAPI } from '../api/client';
@@ -120,7 +121,7 @@ export default function DashboardScreen() {
   };
 
   const handleFindShifts = () => {
-    router.push('/find-shifts');
+    router.push('/home');
   };
 
   const handleViewProfile = () => {
@@ -143,13 +144,15 @@ export default function DashboardScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Dashboard</Text>
         <TouchableOpacity 
-          style={styles.profileButton}
-          onPress={handleViewProfile}
-        >
-          <View style={styles.avatar}>
-            <Ionicons name="person" size={22} color="#8F9BB3" />
-          </View>
-        </TouchableOpacity>
+  style={styles.profileButton}
+  onPress={handleViewProfile}
+>
+  <Image
+    source={require('../../assets/images/dog3.jpg')} 
+    style={styles.avatar}
+    resizeMode="cover"
+  />
+</TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -273,7 +276,10 @@ export default function DashboardScreen() {
         ) : upcomingShift ? (
           <TouchableOpacity 
             style={styles.upcomingShiftCard}
-            onPress={() => router.push(`/shift/${upcomingShift.id}`)}
+            onPress={() => {
+              console.log("Navigating to UPCOMING with ID:", upcomingShift.id);
+              router.push(`/(tabs)/nextShift/${upcomingShift.id}`);
+            }}
           >
             <View style={styles.shiftTimeTag}>
               <Text style={styles.shiftTimeText}>{upcomingShift.date} • {upcomingShift.time}</Text>
@@ -315,7 +321,12 @@ export default function DashboardScreen() {
             <TouchableOpacity 
               key={shift.id}
               style={styles.pastShiftCard}
-              onPress={() => router.push(`/shift/${shift.id}`)}
+              onPress={() => {
+                console.log("Navigating to shift with ID:", shift.id);
+                router.push(`/(tabs)/shift[id]?id=${shift.id}`);
+              }}
+
+
             >
               <View style={styles.pastShiftHeader}>
                 <Text style={styles.pastShiftDate}>{shift.date}</Text>

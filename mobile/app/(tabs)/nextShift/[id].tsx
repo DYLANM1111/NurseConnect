@@ -73,58 +73,89 @@ export default function ShiftDetailsScreen() {
   const timerRef = useRef<NodeJS.Timer | null>(null);
   const [shiftEnded, setShiftEnded] = useState(false);
 
-  // Fetch shift details
+  
   useEffect(() => {
     const fetchShiftDetails = async () => {
       try {
         setLoading(true);
-        console.log('Fetching shift details for ID:', shiftId);
+        console.log('[SHIFT_DETAILS] Starting to fetch shift details');
+        console.log('[SHIFT_DETAILS] Shift ID:', shiftId);
         
-        // For now, load the mock data
-        // In production, you would uncomment the line below
-        // const data = await shiftsAPI.getShiftDetails(shiftId);
+        if (!shiftId) {
+          console.error('[SHIFT_DETAILS] No shift ID provided');
+          throw new Error('Shift ID is required');
+        }
         
-        // Mock data for development
-        const mockShift: ShiftDetails = {
-          id: shiftId || '123',
-          hospital: 'Duke Medical Center',
-          unit: 'Intensive Care Unit',
-          date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-          startTime: '07:00',
-          endTime: '19:00',
-          rate: 95.50,
-          address: '300 Pasteur Drive, Stanford, NC 24305',
-          coordinates: {
-            latitude: 37.4337,
-            longitude: -122.1751
-          },
-          requirements: [
-            'Active RN License',
-            'BLS/ACLS Certification',
-            'Minimum 2 years ICU Experience',
-            'Epic Systems Proficiency'
-          ],
-          contactPerson: 'Dr. Sarah Johnson, RN, MSN',
-          contactPhone: '(650) 555-0123',
-          departmentCode: 'ICU-47A',
-          facilityNotes: 'Pre-shift briefing at 6:45 AM in ICU Conference Room. Please arrive 15 minutes early for handoff procedures.',
-          shiftLength: 12, // hours
-          breakDuration: 30 // minutes
-        };
+        // Fetch real data from API
+        console.log('[SHIFT_DETAILS] Calling shiftsAPI.getShiftDetails');
+        const data = await shiftsAPI.getShiftDetails(shiftId);
         
-        setShift(mockShift);
+        console.log('[SHIFT_DETAILS] API response received:', data);
+        console.log('[SHIFT_DETAILS] Facility data:', data.facility);
+        
+        // Check if the data structure matches what you expect
+        if (!data || !data.id) {
+          console.error('[SHIFT_DETAILS] Invalid data structure returned from API:', data);
+          throw new Error('Invalid data structure returned from API');
+        }
+        
+        // Transform API data to match ShiftDetails interface
+      // Transform API data to match ShiftDetails interface
+// Transform API data to match ShiftDetails interface
+const shiftData: ShiftDetails = {
+  id: data.id,
+  hospital: data.hospital || 'Hospital Name Not Available',
+  unit: data.unit || 'Unit Not Specified',
+  date: data.date || new Date().toLocaleDateString('en-US', { 
+    year: 'numeric', month: 'long', day: 'numeric' 
+  }),
+  startTime: data.startTime || '',
+  endTime: data.endTime || '',
+  rate: data.rate || 0,
+  address: data.distance ? `Distance: ${data.distance}` : 'Address not available',
+  coordinates: {
+    latitude: 37.7749, // Default since not provided in the API
+    longitude: -122.4194
+  },
+  requirements: Array.isArray(data.requirements) ? data.requirements : [],
+  contactPerson: 'Contact person not available',
+  contactPhone: data.contact || 'Phone number not available',
+  departmentCode: data.unit || 'Department code not specified',
+  facilityNotes: data.description || 'No additional notes provided.',
+  shiftLength: data.shiftLength || 0,
+  breakDuration: 30 // Default break duration
+};
+        
+        console.log('[SHIFT_DETAILS] Transformed data:', shiftData);
+        
+        setShift(shiftData);
         setError(null);
       } catch (err) {
-        console.error('Error fetching shift details:', err);
-        setError('Unable to load shift details. Please try again later.');
+        console.error('[SHIFT_DETAILS] Error fetching shift details:', err);
+        setError('We were unable to load the shift details at this time. Please try again later or contact support if the problem persists.');
+        setShift(null);
       } finally {
         setLoading(false);
       }
     };
-
+  
     fetchShiftDetails();
   }, [shiftId]);
-
+// Helper function to calculate shift length in hours
+const calculateShiftLength = (startTime: string, endTime: string): number => {
+  if (!startTime || !endTime) return 0; 
+  
+  try {
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    const diffMs = end.getTime() - start.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+    return Math.round(diffHours * 10) / 10; // Round to nearest decimal
+  } catch (e) {
+    console.error('Error calculating shift length:', e);
+    return 0;
+  }
+};
   // Timer for active shift
   useEffect(() => {
     if (timeLogs.length === 0) return;
@@ -351,21 +382,52 @@ export default function ShiftDetailsScreen() {
     );
   }
 
-  if (error || !shift) {
-    return (
-      <SafeAreaView style={styles.errorContainer}>
-        <Ionicons name="alert-circle-outline" size={60} color="#FF3B30" />
-        <Text style={styles.errorTitle}>Error</Text>
-        <Text style={styles.errorText}>{error || 'Shift not found'}</Text>
-        <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.actionButtonText}>Go Back</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    );
-  }
+  // Enhanced error handling UI for shift-details.tsx
+
+// Replace the current error UI with this more professional version
+if (error || !shift) {
+  return (
+    <SafeAreaView style={styles.errorContainer}>
+      <Stack.Screen 
+        options={{
+          headerTitle: "Shift Details",
+          headerBackTitle: "Back"
+        }}
+      />
+      <View style={styles.errorContent}>
+        <Ionicons name="alert-circle-outline" size={60} color="#FF9500" />
+        <Text style={styles.errorTitle}>Unable to Load Shift Details</Text>
+        <Text style={styles.errorText}>
+          {error || "We couldn't retrieve the information for this shift. Please check your connection and try again."}
+        </Text>
+        <View style={styles.errorActions}>
+          <TouchableOpacity 
+            style={styles.errorButton}
+            onPress={() => router.push('/(tabs)/dashboards')}
+          >
+            <Text style={styles.errorButtonText}>Return to Dashboard</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.errorButton, styles.retryButton]}
+            onPress={() => {
+              setLoading(true);
+              setError(null);
+              setTimeout(() => {
+                setLoading(true);
+                router.setParams({ refresh: Date.now().toString() });
+              }, 500);
+            }}
+          >
+            <Text style={styles.retryButtonText}>Try Again</Text>
+            <Ionicons name="refresh" size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+
 
   const isClockIn = timeLogs.some(log => log.type === 'clock-in');
   const isClockOut = timeLogs.some(log => log.type === 'clock-out');
@@ -674,12 +736,6 @@ const styles = StyleSheet.create({
     color: '#000000',
     marginTop: 16,
     marginBottom: 8,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#8E8E93',
-    textAlign: 'center',
-    marginBottom: 24,
   },
   timerModule: {
     backgroundColor: '#FFFFFF',
@@ -1051,4 +1107,54 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+errorContent: {
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+  padding: 24,
+},
+errorTitle: {
+  fontSize: 22,
+  fontWeight: '600',
+  color: '#1C1C1E',
+  marginTop: 16,
+  marginBottom: 8,
+},
+errorText: {
+  fontSize: 16,
+  color: '#636366',
+  textAlign: 'center',
+  marginBottom: 32,
+  lineHeight: 24,
+},
+errorActions: {
+  width: '100%',
+  flexDirection: 'column',
+  gap: 12,
+},
+errorButton: {
+  paddingVertical: 14,
+  paddingHorizontal: 24,
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: '#8E8E93',
+  alignItems: 'center',
+},
+errorButtonText: {
+  fontSize: 16,
+  fontWeight: '500',
+  color: '#636366',
+},
+retryButton: {
+  backgroundColor: '#0065FF',
+  borderColor: '#0065FF',
+  flexDirection: 'row',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+retryButtonText: {
+  color: '#FFFFFF',
+  fontWeight: '600',
+},
+
 });

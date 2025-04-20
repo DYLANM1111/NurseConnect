@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import apiClient from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import React from 'react';
-
+import { authAPI } from '../api/client';
 
 const DEFAULT_USER_DATA = {
   id: '',
@@ -183,11 +183,16 @@ export default function ProfileScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profile & Credentials</Text>
         <TouchableOpacity 
-          style={styles.settingsButton}
-          onPress={() => router.push('/(tabs)/settings')}
-        >
-          <Ionicons name="settings-outline" size={24} color="#0065FF" />
-        </TouchableOpacity>
+  style={styles.settingsButton}
+  onPress={async () => {
+   
+ await AsyncStorage.removeItem('userSignupComplete');
+ await authAPI.logout();
+    router.push('/(tabs)/index');
+  }}
+>
+  <Ionicons name="log-out-outline" size={24} color="#0065FF" />
+</TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>

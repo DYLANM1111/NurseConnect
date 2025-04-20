@@ -803,11 +803,14 @@ export default function HomeScreen() {
       </View>
       
       <TouchableOpacity 
-        style={styles.applyButton}
-        onPress={() => router.push(`/apply[id]?id=${shift.id}`)}
-        >
-        <Text style={styles.applyButtonText}>Apply</Text>
-      </TouchableOpacity>
+  style={styles.applyButton}
+  onPress={() => router.push({
+    pathname: `/apply[id]?id=${shift.id}`,
+    params: { reset: Date.now().toString() }
+  })}
+>
+  <Text style={styles.applyButtonText}>Apply</Text>
+</TouchableOpacity>
     </TouchableOpacity>
   );
 
@@ -853,9 +856,10 @@ export default function HomeScreen() {
               style={styles.profileButton}
               onPress={() => router.push('/profile')}
             >
-              <View style={styles.avatarPlaceholder}>
-                <Ionicons name="person" size={20} color="#8F9BB3" />
-              </View>
+              <Image 
+  source={require('../../assets/images/dog3.jpg')}
+  style={{ width: '100%', height: '100%', borderRadius: 20 }}
+/>
             </TouchableOpacity>
           </View>
         </View>

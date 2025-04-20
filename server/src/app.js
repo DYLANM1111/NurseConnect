@@ -10,17 +10,14 @@ import dashboardRoutes from './../Shared/Routes/dashboardRoutes.js'
 import { router as shiftRoutes } from './../Shared/Routes/shiftRoutes.js'
 
 
-const { Pool } = pkg;
 
+const { Pool } = pkg;
 const pool = new Pool({
-  user: 'database',                                 
-  host: 'nurseconnect.postgres.database.azure.com', 
-  database: 'nurseconnect',                             
-  password: 'Nurseconnect!',                      
-  port: 5432,                                      
-  ssl: {
-    rejectUnauthorized: false                      
-  }
+  user: 'dylanmuroki',         
+  database: 'nurseconnect',   
+  host: 'localhost',          
+  port: 5432,                  
+  password: '', 
 });
 pool.on('connect', client => {
   client.query('SET search_path TO public');
@@ -34,10 +31,8 @@ pool.query('SELECT NOW()', (err, res) => {
   }
 });
 
-// Make pool available globally
 global.pool = pool;
 
-// Initialize Express app
 const app = express();
 const port = 5001; // Hardcoded port
 

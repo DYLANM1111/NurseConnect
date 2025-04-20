@@ -15,6 +15,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons as Icon } from '@expo/vector-icons';
 import { authAPI } from '../api/client';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 type NavigationProp = {
@@ -40,6 +41,7 @@ const handleLogin = async () => {
   try {
     const response = await authAPI.login(email, password);
     console.log('Login successful:', response);
+    await AsyncStorage.setItem('userSignupComplete', 'true');
     navigation.navigate('dashboards');
   } catch (error) {
     console.error('Login error:', error);
