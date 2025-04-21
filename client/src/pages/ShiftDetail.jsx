@@ -3,26 +3,25 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { getShiftById, deleteShift } from '../services/shiftService';
 import { useAuth } from '../context/AuthContext';
 import { format, differenceInHours } from 'date-fns';
-import { FaEdit, FaTrash, FaCalendarAlt, FaClock, FaDollarSign, FaHospital } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaCalendarAlt, FaClock, FaDollarSign, FaHospital, FaUserCheck, FaUserTimes, FaStar, FaInfoCircle } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 
 const ShiftDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAdmin, currentFacility } = useAuth();
-  
+
   const [shift, setShift] = useState(null);
+  const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   useEffect(() => {
     const fetchShift = async () => {
       try {
         setLoading(true);
-        
         const shiftData = await getShiftById(id);
         setShift(shiftData);
-        
         setLoading(false);
       } catch (error) {
         console.error('Error fetching shift data:', error);
@@ -30,10 +29,34 @@ const ShiftDetail = () => {
         setLoading(false);
       }
     };
-    
+
+    const fetchApplications = async () => {
+      try {
+        const token = localStorage.getItem('token'); // Retrieve the token from localStorage or another storage mechanism
+        const response = await fetch(`http://localhost:8080/api/shifts/${id}/applications`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`, // Include the token in the Authorization header
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error: ${response.status} ${response.statusText}`);
+        }
+
+        const applicationsData = await response.json();
+        setApplications(applicationsData);
+      } catch (error) {
+        console.error('Error fetching applications:', error);
+        toast.error('Failed to fetch applications');
+      }
+    };
+
     fetchShift();
+    fetchApplications();
   }, [id]);
-  
+
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this shift?')) {
       try {
@@ -50,13 +73,77 @@ const ShiftDetail = () => {
   const handleEdit = () => {
     navigate(`/shifts/edit/${id}`);
   };
-  
-  // Check if current facility matches the shift's facility
+
+  const handleApplicationStatus = async (applicationId, status) => {
+    try {
+      const token = localStorage.getItem('token'); // Retrieve the token for authentication
+      const response = await fetch(`http://localhost:8080/api/applications/${applicationId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update application status');
+      }
+
+      const updatedApplication = await response.json();
+      toast.success(`Application ${status === 'approved' ? 'approved' : 'rejected'} successfully`);
+
+      // Update the applications list
+      setApplications((prev) =>
+        prev.map((app) =>
+          app.id === applicationId ? { ...app, status: updatedApplication.status } : app
+        )
+      );
+
+      // If the application is approved, update the shift status to "assigned"
+      if (status === 'approved') {
+        setShift((prevShift) => ({
+          ...prevShift,
+          status: 'assigned',
+        }));
+        toast.success('Shift status updated to "assigned".');
+      }
+    } catch (error) {
+      console.error('Error updating application status:', error);
+      toast.error('Failed to update application status');
+    }
+  };
+
+  const handleShiftStatusChange = async (newStatus) => {
+    try {
+      const token = localStorage.getItem('token'); // Retrieve the token for authentication
+      const response = await fetch(`http://localhost:8080/api/shifts/${shift.id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update shift status');
+      }
+
+      const updatedShift = await response.json();
+      setShift(updatedShift);
+      toast.success(`Shift status updated to "${newStatus}".`);
+    } catch (error) {
+      console.error('Error updating shift status:', error);
+      toast.error('Failed to update shift status');
+    }
+  };
+
   const canEdit = () => {
     if (!shift || !currentFacility) return false;
     return shift.facility_id === currentFacility.id;
   };
-  
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -64,7 +151,7 @@ const ShiftDetail = () => {
       </div>
     );
   }
-  
+
   if (error) {
     return (
       <div className="bg-red-50 p-4 rounded-md">
@@ -72,7 +159,7 @@ const ShiftDetail = () => {
       </div>
     );
   }
-  
+
   if (!shift) {
     return (
       <div className="bg-yellow-50 p-4 rounded-md">
@@ -80,10 +167,9 @@ const ShiftDetail = () => {
       </div>
     );
   }
-  
-  // Calculate shift duration in hours
+
   const shiftDuration = differenceInHours(new Date(shift.end_time), new Date(shift.start_time));
-  
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -197,26 +283,47 @@ const ShiftDetail = () => {
             
             <div>
               <div className="flex items-center mb-4">
-                <FaClock className="text-gray-400 mr-2" />
-                <h3 className="text-lg font-medium text-gray-900">Status</h3>
+                <FaHospital className="text-gray-400 mr-2" />
+                <h3 className="text-lg font-medium text-gray-900">Specialty</h3>
               </div>
               
               <div className="space-y-3">
                 <div>
-                  <span className="text-sm font-medium text-gray-500">Current Status:</span>
-                  <p className="mt-1">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      shift.status === 'open' 
-                        ? 'bg-green-100 text-green-800'
-                        : shift.status === 'assigned'
-                          ? 'bg-blue-100 text-blue-800'
-                          : shift.status === 'completed'
-                            ? 'bg-gray-100 text-gray-800'
-                            : 'bg-red-100 text-red-800'
-                    }`}>
-                      {shift.status.charAt(0).toUpperCase() + shift.status.slice(1)}
-                    </span>
-                  </p>
+                  <span className="text-sm font-medium text-gray-500">Specialty:</span>
+                  <p className="mt-1">{shift.specialty || 'Not specified'}</p>
+                </div>
+                
+                <div>
+                  <span className="text-sm font-medium text-gray-500">Urgent Fill:</span>
+                  <p className="mt-1">{shift.urgent_fill ? 'Yes' : 'No'}</p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center mb-4">
+                <FaStar className="text-gray-400 mr-2" />
+                <h3 className="text-lg font-medium text-gray-900">Facility Rating</h3>
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <span className="text-sm font-medium text-gray-500">Rating:</span>
+                  <p className="mt-1">{shift.facility_rating ? `${shift.facility_rating}/5` : 'Not rated'}</p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center mb-4">
+                <FaInfoCircle className="text-gray-400 mr-2" />
+                <h3 className="text-lg font-medium text-gray-900">Description</h3>
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <span className="text-sm font-medium text-gray-500">Details:</span>
+                  <p className="mt-1">{shift.description || 'No description provided'}</p>
                 </div>
               </div>
             </div>
@@ -235,8 +342,63 @@ const ShiftDetail = () => {
           )}
         </div>
       </div>
+
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold text-gray-900">Applications</h2>
+        {applications.length === 0 ? (
+          <p className="text-gray-500 mt-4">No applications for this shift yet.</p>
+        ) : (
+          <div className="mt-4 space-y-4">
+            {applications.map((application) => (
+              <div key={application.id} className="p-4 bg-white shadow rounded-lg flex justify-between items-center">
+                <div>
+                  <p className="text-gray-900 font-medium">{application.nurse_name}</p>
+                  <p className="text-gray-500 text-sm">Specialty: {application.specialty}</p>
+                  <p className="text-gray-500 text-sm">Years of Experience: {application.years_experience}</p>
+                  <p className="text-gray-500 text-sm">Description: {application.nurse_description}</p>
+                  <p
+                    className={`text-sm font-medium ${
+                      application.status === 'approved'
+                        ? 'text-green-600'
+                        : application.status === 'rejected'
+                        ? 'text-red-600'
+                        : 'text-gray-500'
+                    }`}
+                  >
+                    Status: {application.status}
+                  </p>
+                </div>
+                <div className="flex space-x-2">
+                  {application.status === 'approved' ? (
+                    <p className="text-green-600 font-medium">Approved</p>
+                  ) : application.status === 'rejected' ? (
+                    <p className="text-red-600 font-medium">Rejected</p>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => handleApplicationStatus(application.id, 'approved')}
+                        className="inline-flex items-center px-3 py-1 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
+                        disabled={shift.status !== 'open'} // Disable if shift is not open
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleApplicationStatus(application.id, 'rejected')}
+                        className="inline-flex items-center px-3 py-1 text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+                      >
+                        Reject
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
 export default ShiftDetail;
+

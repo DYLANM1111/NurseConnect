@@ -7,8 +7,11 @@ const {
   createShift,
   updateShift,
   deleteShift,
-  getShiftsByFacility
+  getShiftsByFacility,
+  getApplicationsByShiftId,
+  updateShiftStatus
 } = require('../controllers/shiftController');
+const { updateApplicationStatus } = require('../controllers/applicationController');
 const { authenticateToken } = require('../middleware/auth');
 const { shiftValidationRules, handleValidationErrors } = require('../middleware/validators');
 
@@ -39,5 +42,17 @@ router.delete('/:id', authenticateToken, deleteShift);
 
 // Get shifts by facility
 router.get('/facility/:facilityId', authenticateToken, getShiftsByFacility);
+
+// Get applications by shift ID
+router.get('/:shiftId/applications', authenticateToken, getApplicationsByShiftId);
+
+// Get applications by shift ID (alternative route)
+router.get('/:id/applications', authenticateToken, getApplicationsByShiftId);
+
+// Update application status
+router.patch('/applications/:id', updateApplicationStatus);
+
+// Update shift status
+router.patch('/:id/status', updateShiftStatus);
 
 module.exports = router;

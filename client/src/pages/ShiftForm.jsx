@@ -26,8 +26,14 @@ const shiftSchema = Yup.object().shape({
     .min(0, 'Hourly rate must be at least 0'),
   status: Yup.string()
     .required('Status is required')
-    .oneOf(['open', 'assigned', 'completed', 'cancelled'], 'New shifts must have "open" status'),
-  requirements: Yup.array().of(Yup.string())
+    .oneOf(['open', 'assigned', 'completed', 'cancelled'], 'Invalid status'),
+  requirements: Yup.array().of(Yup.string()),
+  urgent_fill: Yup.boolean().required('Urgent fill is required'),
+  specialty: Yup.string().required('Specialty is required'),
+  facility_rating: Yup.number()
+    .min(0, 'Rating must be at least 0')
+    .max(5, 'Rating cannot exceed 5'),
+  description: Yup.string().nullable(),
 });
 
 const ShiftForm = ({ isEdit }) => {
@@ -81,7 +87,11 @@ const ShiftForm = ({ isEdit }) => {
         end_time: shift.end_time || '',
         hourly_rate: shift.hourly_rate || '',
         status: shift.status || 'open',
-        requirements: shift.requirements || []
+        requirements: shift.requirements || [],
+        urgent_fill: shift.urgent_fill || false,
+        specialty: shift.specialty || '',
+        facility_rating: shift.facility_rating || '',
+        description: shift.description || ''
       };
     } else {
       // For a new shift, set default values
@@ -94,33 +104,31 @@ const ShiftForm = ({ isEdit }) => {
         end_time: '',
         hourly_rate: '',
         status: 'open', // Always set to 'open' for new shifts
-        requirements: []
+        requirements: [],
+        urgent_fill: false,
+        specialty: '',
+        facility_rating: '',
+        description: ''
       };
     }
   };
   
-  const handleSubmit = async (values, { setSubmitting }) => {
+  const handleSubmit = async (values) => {
     try {
-      // Always ensure status is 'open' for new shifts
-      if (!isEdit) {
-        values.status = 'open';
-      }
-      
       if (isEdit) {
+        // Update existing shift
         await updateShift(id, values);
         toast.success('Shift updated successfully');
       } else {
+        // Create new shift
         await createShift(values);
         toast.success('Shift created successfully');
       }
-      
       navigate('/shifts');
     } catch (error) {
       console.error('Error saving shift:', error);
-      toast.error(`Failed to ${isEdit ? 'update' : 'create'} shift`);
+      toast.error('Failed to save shift');
     }
-    
-    setSubmitting(false);
   };
   
   if (loading) {
@@ -279,6 +287,56 @@ const ShiftForm = ({ isEdit }) => {
                       className={`form-input ${touched.hourly_rate && errors.hourly_rate ? 'border-red-500' : ''}`}
                     />
                     <ErrorMessage name="hourly_rate" component="div" className="form-error" />
+                  </div>
+
+                  <div>
+                    <label htmlFor="specialty" className="form-label">Specialty</label>
+                    <Field
+                      type="text"
+                      id="specialty"
+                      name="specialty"
+                      className={`form-input ${touched.specialty && errors.specialty ? 'border-red-500' : ''}`}
+                      placeholder="e.g., ICU, Pediatrics"
+                    />
+                    <ErrorMessage name="specialty" component="div" className="form-error" />
+                  </div>
+
+                  <div>
+                    <label htmlFor="urgent_fill" className="form-label">Urgent Fill</label>
+                    <Field
+                      type="checkbox"
+                      id="urgent_fill"
+                      name="urgent_fill"
+                      className="form-checkbox"
+                    />
+                    <ErrorMessage name="urgent_fill" component="div" className="form-error" />
+                  </div>
+
+                  <div>
+                    <label htmlFor="facility_rating" className="form-label">Facility Rating</label>
+                    <Field
+                      type="number"
+                      id="facility_rating"
+                      name="facility_rating"
+                      min="0"
+                      max="5"
+                      step="0.1"
+                      className={`form-input ${touched.facility_rating && errors.facility_rating ? 'border-red-500' : ''}`}
+                      placeholder="e.g., 4.5"
+                    />
+                    <ErrorMessage name="facility_rating" component="div" className="form-error" />
+                  </div>
+
+                  <div>
+                    <label htmlFor="description" className="form-label">Description</label>
+                    <Field
+                      as="textarea"
+                      id="description"
+                      name="description"
+                      className={`form-input ${touched.description && errors.description ? 'border-red-500' : ''}`}
+                      placeholder="Provide a brief description of the shift"
+                    />
+                    <ErrorMessage name="description" component="div" className="form-error" />
                   </div>
                 </div>
                 
