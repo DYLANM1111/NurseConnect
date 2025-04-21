@@ -18,10 +18,8 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { authAPI } from '../api/client';
 import apiClient from '../api/client';
 
-// Get screen dimensions for responsive design
 const { width } = Dimensions.get('window');
 
-// Define types for our application data
 type Application = {
   id: string;
   shift_id: string;

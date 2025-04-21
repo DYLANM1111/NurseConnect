@@ -646,6 +646,7 @@ export default function HomeScreen() {
     try {
       setLoading(true);
       const data = await shiftsAPI.getShifts();
+      console.log("THISSSS", data)
       setShifts(data);
       setError(null);
     } catch (error) {
@@ -674,29 +675,27 @@ export default function HomeScreen() {
 
   }, []);
 
-  // Filter shifts based on selected criteria
   const filteredShifts = shifts.filter(shift => {
-    // Filter by specialty
-    const specialtyMatches = selectedSpecialty === 'All' || shift.specialty === selectedSpecialty;
+    const specialtyMatches = 
+      selectedSpecialty === 'All' || 
+      (shift.specialty === selectedSpecialty) || 
+      (shift.specialty === null); 
     
-    // Filter by search (hospital name or unit)
     const searchMatches = searchQuery === '' || 
       shift.hospital.toLowerCase().includes(searchQuery.toLowerCase()) ||
       shift.unit.toLowerCase().includes(searchQuery.toLowerCase());
     
-    // Filter by price range
     const rateMatches = shift.rate >= priceRange[0] && shift.rate <= priceRange[1];
     
-    // Filter by distance - parse distance string to get number
     const distanceValue = parseFloat(shift.distance?.split(' ')[0] || '0');
     const distanceMatches = distanceValue <= maxDistance;
     
-    // Filter by shift length
-    const lengthMatches = shiftLength.includes(shift.shiftLength);
+    const lengthMatches = 
+      shiftLength.includes(shift.shiftLength) || 
+      (shift.shiftLength === 24); 
     
     return specialtyMatches && searchMatches && rateMatches && distanceMatches && lengthMatches;
   });
-
   const nextSevenDays = Array.from({ length: 7 }, (_, i) => {
     const date = new Date();
     date.setDate(date.getDate() + i);
@@ -794,11 +793,11 @@ export default function HomeScreen() {
 
       <View style={styles.shiftFooter}>
         <View style={styles.tagContainer}>
-          <Text style={styles.tag}>{shift.specialty}</Text>
+          <Text style={styles.tag}>{shift.specialty||'General'}</Text>
         </View>
         <View style={styles.ratingContainer}>
           <Ionicons name="star" size={16} color="#FFBC00" />
-          <Text style={styles.ratingText}>{shift.facilityRating.toFixed(1)}</Text>
+          <Text style={styles.ratingText}>{shift.facilityRating ?shift.facilityRating.toFixed(1) : 'N/A'}</Text>
         </View>
       </View>
       

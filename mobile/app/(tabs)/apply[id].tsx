@@ -268,7 +268,7 @@ const handleSubmitApplication = async () => {
                     <Text style={styles.unitName}>{shift.unit}</Text>
                     <View style={styles.ratingContainer}>
                       <Ionicons name="star" size={14} color="#FFBC00" />
-                      <Text style={styles.ratingText}>{shift.facilityRating.toFixed(1)}</Text>
+                      <Text style={styles.ratingText}>{shift.facilityRating ?shift.facilityRating.toFixed(1) : 'N/A'}</Text>
                     </View>
                   </View>
                 </View>
