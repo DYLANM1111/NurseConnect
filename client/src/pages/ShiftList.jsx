@@ -337,6 +337,9 @@ const ShiftList = () => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Urgent
+                  </th>
                   <th scope="col" className="relative px-6 py-3">
                     <span className="sr-only">Actions</span>
                   </th>
@@ -346,7 +349,10 @@ const ShiftList = () => {
                 {displayShifts.map((shift) => (
                   <tr key={shift.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{shift.unit}</div>
+                      <div className="text-sm text-gray-900">
+                        {shift.unit}
+                        {shift.urgent_fill && <span className="text-red-500 ml-1">*</span>}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
@@ -375,6 +381,13 @@ const ShiftList = () => {
                       }`}>
                         {shift.status.charAt(0).toUpperCase() + shift.status.slice(1)}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {shift.urgent_fill ? (
+                        <span className="text-red-500 font-bold">Urgent</span>
+                      ) : (
+                        <span className="text-gray-500">Normal</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-4">

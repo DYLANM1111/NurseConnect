@@ -19,7 +19,14 @@ const userValidationRules = [
   body('role').isIn(['nurse', 'admin']).withMessage('Role must be either nurse or admin')
 ];
 
+// Example validation rules for shifts
+const shiftValidationRules = [
+  // Add validation rules here, e.g.:
+  // check('fieldName').notEmpty().withMessage('Field is required'),
+];
+
 module.exports = {
   handleValidationErrors,
-  userValidationRules
+  userValidationRules,
+  shiftValidationRules
 };
