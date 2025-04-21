@@ -5,15 +5,11 @@ require('dotenv').config();
 const connectionString = process.env.DATABASE_URL;
 
 const pool = new Pool({
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  database: process.env.DB_NAME,
-  /* connectionString,
-  ssl: {
-    rejectUnauthorized: false
-  } */
+  user: 'dylanmuroki',         
+  database: 'nurseconnect',   
+  host: 'localhost',          
+  port: 5432,                  
+  password: '', 
 });
 
 module.exports = {
