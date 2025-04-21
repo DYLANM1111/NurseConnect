@@ -184,7 +184,7 @@ const getApplicationsByShiftId = async (req, res) => {
               np.years_experience, 
               a.special_notes AS nurse_description
        FROM applications a
-       JOIN nurse_profiles np ON a.nurse_id = np.nurse_id -- Updated to use np.nurse_id
+       JOIN nurse_profiles np ON a.nurse_id = np.id 
        JOIN users u ON np.user_id = u.id
        WHERE a.shift_id = $1`,
       [shiftId]
