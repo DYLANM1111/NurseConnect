@@ -90,7 +90,7 @@ const ShiftForm = ({ isEdit }) => {
         requirements: shift.requirements || [],
         urgent_fill: shift.urgent_fill || false,
         specialty: shift.specialty || '',
-        facility_rating: shift.facility_rating || '',
+        facility_rating: shift.facility_rating || 5.0,
         description: shift.description || ''
       };
     } else {
@@ -107,7 +107,7 @@ const ShiftForm = ({ isEdit }) => {
         requirements: [],
         urgent_fill: false,
         specialty: '',
-        facility_rating: '',
+        facility_rating: 5.0,
         description: ''
       };
     }
@@ -312,20 +312,8 @@ const ShiftForm = ({ isEdit }) => {
                     <ErrorMessage name="urgent_fill" component="div" className="form-error" />
                   </div>
 
-                  <div>
-                    <label htmlFor="facility_rating" className="form-label">Facility Rating</label>
-                    <Field
-                      type="number"
-                      id="facility_rating"
-                      name="facility_rating"
-                      min="0"
-                      max="5"
-                      step="0.1"
-                      className={`form-input ${touched.facility_rating && errors.facility_rating ? 'border-red-500' : ''}`}
-                      placeholder="e.g., 4.5"
-                    />
-                    <ErrorMessage name="facility_rating" component="div" className="form-error" />
-                  </div>
+                  {/* Facility Rating - Hidden field with default 5.0 */}
+                  <Field type="hidden" name="facility_rating" value="5.0" />
 
                   <div>
                     <label htmlFor="description" className="form-label">Description</label>

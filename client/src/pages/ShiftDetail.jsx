@@ -3,7 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { getShiftById, deleteShift } from '../services/shiftService';
 import { useAuth } from '../context/AuthContext';
 import { format, differenceInHours } from 'date-fns';
-import { FaEdit, FaTrash, FaCalendarAlt, FaClock, FaDollarSign, FaHospital, FaUserCheck, FaUserTimes, FaStar, FaInfoCircle } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaCalendarAlt, FaClock, FaDollarSign, FaHospital, FaUserCheck, FaUserTimes, FaStar, FaInfoCircle, FaExclamationTriangle } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 
 const ShiftDetail = () => {
@@ -15,6 +15,7 @@ const ShiftDetail = () => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     const fetchShift = async () => {
@@ -49,7 +50,6 @@ const ShiftDetail = () => {
         setApplications(applicationsData);
       } catch (error) {
         console.error('Error fetching applications:', error);
-        toast.error('Failed to fetch applications');
       }
     };
 
@@ -58,15 +58,13 @@ const ShiftDetail = () => {
   }, [id]);
 
   const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this shift?')) {
-      try {
-        await deleteShift(id);
-        toast.success('Shift deleted successfully');
-        navigate('/shifts');
-      } catch (error) {
-        console.error('Error deleting shift:', error);
-        toast.error('Failed to delete shift');
-      }
+    try {
+      await deleteShift(id);
+      toast.success('Shift deleted successfully');
+      navigate('/shifts');
+    } catch (error) {
+      console.error('Error deleting shift:', error);
+      toast.error('Failed to delete shift');
     }
   };
 
@@ -196,7 +194,7 @@ const ShiftDetail = () => {
               </button>
               
               <button
-                onClick={handleDelete}
+                onClick={() => setShowDeleteModal(true)}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
               >
                 <FaTrash className="mr-2" />
@@ -396,9 +394,46 @@ const ShiftDetail = () => {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-md w-full shadow-xl">
+            <div className="p-6">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
+                <FaExclamationTriangle className="h-6 w-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 text-center mb-2">
+                Delete Shift
+              </h3>
+              <p className="text-sm text-gray-500 text-center mb-6">
+                Are you sure you want to delete this shift? This action cannot be undone. All applications for this shift will also be removed.
+              </p>
+              <div className="mt-6 flex justify-center space-x-3">
+                <button
+                  type="button"
+                  className="inline-flex justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  onClick={() => setShowDeleteModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    handleDelete();
+                  }}
+                >
+                  Delete Shift
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default ShiftDetail;
-

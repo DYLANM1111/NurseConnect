@@ -44,15 +44,15 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="text-gray-500">Loading...</div>
+        <div className="text-gray-500 dark:text-gray-400">Loading...</div>
       </div>
     );
   }
   
   if (error) {
     return (
-      <div className="bg-red-50 p-4 rounded-md">
-        <div className="text-sm text-red-700">{error}</div>
+      <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-md">
+        <div className="text-sm text-red-700 dark:text-red-400">{error}</div>
       </div>
     );
   }
@@ -60,14 +60,14 @@ const Dashboard = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold text-gray-900">
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
           Welcome, {currentFacility.name}!
         </h1>
         
         <div className="flex space-x-4">
           <Link
             to="/shifts/new"
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600"
           >
             <FaPlus className="mr-2" />
             New Shift
@@ -76,19 +76,19 @@ const Dashboard = () => {
       </div>
       
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <FaCalendarAlt className="h-6 w-6 text-gray-400" />
+                <FaCalendarAlt className="h-6 w-6 text-gray-400 dark:text-gray-300" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                     Open Shifts
                   </dt>
                   <dd>
-                    <div className="text-lg font-medium text-gray-900">
+                    <div className="text-lg font-medium text-gray-900 dark:text-white">
                       {shifts.length}
                     </div>
                   </dd>
@@ -96,28 +96,28 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
-          <div className="bg-gray-50 px-5 py-3">
+          <div className="bg-gray-50 dark:bg-gray-700 px-5 py-3">
             <div className="text-sm">
-              <Link to="/shifts" className="font-medium text-primary-600 hover:text-primary-500">
+              <Link to="/shifts" className="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300">
                 View all shifts
               </Link>
             </div>
           </div>
         </div>
         
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <FaHospital className="h-6 w-6 text-gray-400" />
+                <FaHospital className="h-6 w-6 text-gray-400 dark:text-gray-300" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                     Your Facility
                   </dt>
                   <dd>
-                    <div className="text-lg font-medium text-gray-900">
+                    <div className="text-lg font-medium text-gray-900 dark:text-white">
                       {currentFacility.contact_name}
                     </div>
                   </dd>
@@ -125,9 +125,9 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
-          <div className="bg-gray-50 px-5 py-3">
+          <div className="bg-gray-50 dark:bg-gray-700 px-5 py-3">
             <div className="text-sm">
-              <Link to="/facility-profile" className="font-medium text-primary-600 hover:text-primary-500">
+              <Link to="/facility-profile" className="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300">
                 View your profile
               </Link>
             </div>
@@ -135,27 +135,27 @@ const Dashboard = () => {
         </div>
       </div>
       
-      <div className="bg-white shadow rounded-lg">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
         <div className="p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Recent Open Shifts</h2>
+          <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Recent Open Shifts</h2>
           
           {shifts.length === 0 ? (
-            <p className="text-gray-500">No open shifts available for your facility.</p>
+            <p className="text-gray-500 dark:text-gray-400">No open shifts available for your facility.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Unit
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Date
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Time
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Rate
                     </th>
                     <th scope="col" className="relative px-6 py-3">
@@ -163,29 +163,29 @@ const Dashboard = () => {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {shifts.slice(0, 5).map((shift) => (
-                    <tr key={shift.id}>
+                    <tr key={shift.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{shift.unit}</div>
+                        <div className="text-sm text-gray-900 dark:text-white">{shift.unit}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
+                        <div className="text-sm text-gray-900 dark:text-white">
                           {format(new Date(shift.start_time), 'MMM dd, yyyy')}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
+                        <div className="text-sm text-gray-900 dark:text-white">
                           {format(new Date(shift.start_time), 'h:mm a')} - {format(new Date(shift.end_time), 'h:mm a')}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
+                        <div className="text-sm text-gray-900 dark:text-white">
                           ${shift.hourly_rate}/hr
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <Link to={`/shifts/${shift.id}`} className="text-primary-600 hover:text-primary-900">
+                        <Link to={`/shifts/${shift.id}`} className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300">
                           View
                         </Link>
                       </td>
@@ -196,7 +196,7 @@ const Dashboard = () => {
               
               {shifts.length > 5 && (
                 <div className="px-6 py-4 text-center">
-                  <Link to="/shifts" className="text-primary-600 hover:text-primary-900">
+                  <Link to="/shifts" className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300">
                     View all shifts
                   </Link>
                 </div>
