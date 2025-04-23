@@ -157,33 +157,120 @@ const calculateShiftLength = (startTime: string, endTime: string): number => {
   }
 };
   // Timer for active shift
-  useEffect(() => {
-    if (timeLogs.length === 0) return;
+// Find the timer effect in your [id].tsx file and replace it with this version
+// This makes each second count as an hour for demo purposes
+
+// Timer for active shift
+useEffect(() => {
+  if (timeLogs.length === 0) return;
+  
+  // Check if shift is active
+  const isClockIn = timeLogs.some(log => log.type === 'clock-in');
+  const isClockOut = timeLogs.some(log => log.type === 'clock-out');
+  
+  if (isClockIn && !isClockOut) {
+    // Start timer - update every second but count each second as an hour
+    timerRef.current = setInterval(() => {
+      updateTimersForDemo();
+    }, 1000); // Still update every second
+  } else if (isClockOut) {
+    // Final calculation when clocked out
+    updateTimersForDemo();
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+  }
+  
+  return () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+  };
+}, [timeLogs, isOnBreak, isOnLunch]);
+
+// New function that treats each second as an hour for the demo
+const updateTimersForDemo = () => {
+  const now = new Date();
+  let workMs = 0;
+  let breakMs = 0;
+  
+  // Create pairs of events (clock-in/out, break-start/end, etc.)
+  for (let i = 0; i < timeLogs.length; i++) {
+    const log = timeLogs[i];
     
-    // Check if shift is active
-    const isClockIn = timeLogs.some(log => log.type === 'clock-in');
-    const isClockOut = timeLogs.some(log => log.type === 'clock-out');
-    
-    if (isClockIn && !isClockOut) {
-      // Start timer
-      timerRef.current = setInterval(() => {
-        updateTimers();
-      }, 1000);
-    } else if (isClockOut) {
-      // Final calculation when clocked out
-      updateTimers();
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
+    if (log.type === 'clock-in') {
+      // Find next clock-out or current time
+      let endTime = now;
+      const clockOutLog = timeLogs.find((l, idx) => idx > i && l.type === 'clock-out');
+      if (clockOutLog) {
+        endTime = clockOutLog.timestamp;
       }
+      
+      // Calculate real milliseconds between events
+      const realTimeSpan = endTime.getTime() - log.timestamp.getTime();
+      
+      // Convert seconds to hours (1 second = 1 hour = 3,600,000 ms)
+      // This is where the accelerated time happens
+      const demoTimeSpan = (realTimeSpan / 1000) * 3600000;
+      
+      workMs += demoTimeSpan;
     }
     
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
+    // Track break time
+    if (log.type === 'break-start' || log.type === 'lunch-start') {
+      // Find corresponding end or current time
+      let endTime = now;
+      const endType = log.type === 'break-start' ? 'break-end' : 'lunch-end';
+      const endLog = timeLogs.find((l, idx) => idx > i && l.type === endType);
+      
+      if (endLog) {
+        endTime = endLog.timestamp;
+      } else if ((log.type === 'break-start' && isOnBreak) || 
+                (log.type === 'lunch-start' && isOnLunch)) {
+        // Calculate real milliseconds for ongoing break
+        const realBreakMs = now.getTime() - log.timestamp.getTime();
+        
+        // Convert seconds to hours for break time too
+        const demoBreakMs = (realBreakMs / 1000) * 3600000;
+        
+        breakMs += demoBreakMs;
+        continue;
       }
-    };
-  }, [timeLogs, isOnBreak, isOnLunch]);
-
+      
+      // Calculate real milliseconds between break start/end
+      const realBreakTimeSpan = endTime.getTime() - log.timestamp.getTime();
+      
+      // Convert seconds to hours for break time
+      const demoBreakTimeSpan = (realBreakTimeSpan / 1000) * 3600000;
+      
+      breakMs += demoBreakTimeSpan;
+    }
+  }
+  
+  // Subtract breaks from work time
+  const netWorkMs = workMs - breakMs;
+  
+  // Update state values with our accelerated time
+  setTotalWorkTime(netWorkMs);
+  setTotalBreakTime(breakMs);
+  
+  // Format active time display
+  if (netWorkMs > 0) {
+    const hours = Math.floor(netWorkMs / (1000 * 60 * 60));
+    const minutes = Math.floor((netWorkMs % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((netWorkMs % (1000 * 60)) / 1000);
+    
+    setActiveTime(
+      `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+    );
+    
+    // Calculate earnings (only count active work time)
+    if (shift) {
+      const hours = netWorkMs / (1000 * 60 * 60);
+      setEarnings(Number((hours * shift.rate).toFixed(2)));
+    }
+  }
+};
   // Update all timers
   const updateTimers = () => {
     const now = new Date();

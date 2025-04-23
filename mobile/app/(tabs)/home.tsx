@@ -628,15 +628,11 @@ export default function HomeScreen() {
   const [error, setError] = useState<string | null>(null);
   
   // Filtering state
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedSpecialty, setSelectedSpecialty] = useState('All');
   const [refreshing, setRefreshing] = useState(false);
   const [viewType, setViewType] = useState('list');
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [priceRange, setPriceRange] = useState([40, 100]);
-  const [maxDistance, setMaxDistance] = useState(25);
-  const [shiftLength, setShiftLength] = useState([8, 12]);
   const [user, setUser] = useState(null);
 
 
@@ -676,68 +672,17 @@ export default function HomeScreen() {
   }, []);
 
   const filteredShifts = shifts.filter(shift => {
-    const specialtyMatches = 
-      selectedSpecialty === 'All' || 
-      (shift.specialty === selectedSpecialty) || 
-      (shift.specialty === null); 
-    
+    // Keep only the search functionality
     const searchMatches = searchQuery === '' || 
       shift.hospital.toLowerCase().includes(searchQuery.toLowerCase()) ||
       shift.unit.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const rateMatches = shift.rate >= priceRange[0] && shift.rate <= priceRange[1];
-    
-    const distanceValue = parseFloat(shift.distance?.split(' ')[0] || '0');
-    const distanceMatches = distanceValue <= maxDistance;
-    
-    const lengthMatches = 
-      shiftLength.includes(shift.shiftLength) || 
-      (shift.shiftLength === 24); 
-    
-    return specialtyMatches && searchMatches && rateMatches && distanceMatches && lengthMatches;
-  });
-  const nextSevenDays = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() + i);
-    return date;
+    // Return all shifts that match the search query
+    return searchMatches;
   });
 
-  const formatDay = (date) => {
-    const today = new Date();
-    
-    if (
-      date.getDate() === today.getDate() &&
-      date.getMonth() === today.getMonth() &&
-      date.getFullYear() === today.getFullYear()
-    ) {
-      return 'Today';
-    }
-
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    if (
-      date.getDate() === tomorrow.getDate() &&
-      date.getMonth() === tomorrow.getMonth() &&
-      date.getFullYear() === tomorrow.getFullYear()
-    ) {
-      return 'Tmrw';
-    }
-
-    return date.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 3);
-  };
-
-  const formatDateNumber = (date) => {
-    return date.getDate().toString();
-  };
-
-  const toggleFilter = (length) => {
-    if (shiftLength.includes(length)) {
-      setShiftLength(shiftLength.filter(l => l !== length));
-    } else {
-      setShiftLength([...shiftLength, length]);
-    }
-  };
+ 
+  
 
   // Handle refreshing
   const handleRefresh = () => {
