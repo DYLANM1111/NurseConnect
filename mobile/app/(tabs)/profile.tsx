@@ -188,7 +188,7 @@ export default function ProfileScreen() {
    
  await AsyncStorage.removeItem('userSignupComplete');
  await authAPI.logout();
-    router.push('/(tabs)/index');
+    router.push('/index');
   }}
 >
   <Ionicons name="log-out-outline" size={24} color="#0065FF" />

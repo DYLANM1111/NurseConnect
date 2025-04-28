@@ -15,6 +15,7 @@ import { Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dashboardAPI } from '../api/client';
+import { RefreshControl } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -69,6 +70,8 @@ export default function DashboardScreen() {
   const [upcomingShift, setUpcomingShift] = useState<UpcomingShift | null>(null);
   const [completedShifts, setCompletedShifts] = useState<CompletedShift[]>([]);
   const [loadingShifts, setLoadingShifts] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -114,7 +117,6 @@ export default function DashboardScreen() {
       console.log('Dashboard data loaded successfully');
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      Alert.alert('Error', 'Failed to load your dashboard data. Please try again.');
     } finally {
       setLoadingShifts(false);
     }
@@ -137,7 +139,21 @@ export default function DashboardScreen() {
       </SafeAreaView>
     );
   }
-
+  const onRefresh = async () => {
+    if (!userData?.id) return;
+    
+    setRefreshing(true);
+    try {
+      await fetchDashboardData(userData.id);
+      console.log('Dashboard refreshed successfully');
+    } catch (error) {
+      console.error('Error refreshing dashboard:', error);
+      Alert.alert('Error', 'Failed to refresh your dashboard. Please try again.');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+  
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -157,6 +173,14 @@ export default function DashboardScreen() {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Welcome Banner */}
+        refreshControl={
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      colors={['#0065FF']} // Android
+      tintColor="#0065FF" // iOS
+    />
+  }
         <View style={styles.welcomeCard}>
           <View style={styles.welcomeContent}>
             <Text style={styles.welcomeText}>Welcome back,</Text>
